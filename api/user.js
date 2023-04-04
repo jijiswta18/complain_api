@@ -6,12 +6,14 @@ const router        = express.Router();
 const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 const bcrypt        = require('bcrypt');
 const fetch         = require('node-fetch');
+
 const jwt           = require('jsonwebtoken');
 const nodemailer    = require("nodemailer");
 const bodyParser    = require('body-parser');
 
 const CryptoJS      = require("crypto-js");
 const Buffer        = require('buffer/').Buffer
+const fs            = require('fs');
 
 
 router.use(bodyParser.json());
@@ -99,7 +101,9 @@ var storage = multer.diskStorage({
     }
 });
 
+
 var upload = multer({ storage: storage });
+
 
 
 router.route('/user/uploadFiles')
@@ -108,6 +112,7 @@ router.route('/user/uploadFiles')
     res.send(req.files);
 })
     
+
 // Create a nodemailer transport for sending emails
 // const transporter = nodemailer.createTransport({
 
@@ -433,7 +438,7 @@ router.route('/user/forgot/reset-password')
                         "modified_date" : date
                     }
 
-                    let sql_update = await 'UPDATE register SET ? WHERE id = ?';
+                    let sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
 
                     db.query(sql_update, [update_password, id], async function(err2, result2, fields){
 
@@ -737,6 +742,7 @@ router.route('/user/complain')
                 "division"          : req.body.division,
                 "detail"            : req.body.detail,
                 "status_call"       : 0,
+                "date"              : date,
                 "create_by"         : req.body.register_id,
                 "create_date"       : date,
                 "modified_by"       : req.body.register_id,
@@ -836,6 +842,7 @@ router.route('/user/files')
     try {
 
         let item = await {
+            "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
             "register_id"       : req.body.register_id,
             "complain_id"       : req.body.complain_id,
@@ -974,7 +981,7 @@ router.route('/user/create')
 })
 
 
-router.route('/user/get/listComplain/:id')
+router.route('/user/get/listFollow/:id')
 .get(async (req, res, next) => {
 
     try {
@@ -1050,19 +1057,76 @@ router.route('/user/get/complainDetail/:id')
 
 })
 
+router.route('/user/get/complainStep/:id')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}'`
+        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
+
+        db.query(sql, async function(err, result, fields){
+
+            console.log(sql);
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+
+// router.route('/user/getUrlFiles')
+// .get(async (req,res, next)=> { 
+
+//     try {
+
+//         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
+//         const url               = await fullUrl+"/uploads/"+req.query.filename;
+//         // const imageUrl          = await url;
+//         // const imageUrlData      = await fetch(imageUrl);
+//         // const buffer            = await imageUrlData.arrayBuffer();
+
+//         const base64Buffer =        await Buffer.from(url, 'binary').toString('base64');
+//         // const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
+//         // const contentType       = await imageUrlData.headers.get('content-type');
+//         // const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
+
+//         await res.send(base64Buffer)
+              
+//     } catch (error) {
+
+//         console.log(error);
+        
+//     }
+
+// });
 router.route('/user/getUrlFiles')
 .get(async (req,res, next)=> { 
 
     try {
-
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
         const url               = await fullUrl+"/uploads/"+req.query.filename;
-        const imageUrl          = await url;
-        const imageUrlData      = await fetch(imageUrl);
+        const imageUrlData      = await fetch(url);
         const buffer            = await imageUrlData.arrayBuffer();
         const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
         const contentType       = await imageUrlData.headers.get('content-type');
         const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
+
+
+        
+        // console.log(imageBas64);
 
         await res.send(imageBas64)
               
@@ -1073,11 +1137,5 @@ router.route('/user/getUrlFiles')
     }
 
 });
-
-
-
-
-
-
 
 module.exports = router

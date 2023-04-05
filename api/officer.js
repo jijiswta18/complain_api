@@ -95,29 +95,39 @@ router.route('/backoffice/login')
 
                 client.bind(username_ad, password, async err =>  {
 
-                    let password = await false
+                    let updateData = {}
+
+                    let  newToken = await generateToken({ userId: user.id });
 
                     if(err){
-                        res.status(400).send("error : password error");
+                        if(await bcrypt.compare(password, user.password)){
+                            console.log('======');
+                            updateData = await {
+                                "token"     : newToken,
+                                "password"  : hashedPassword,
+                            }
+    
+                        }else{
+                            console.log('1111');
+                            res.status(400).send("error : password error");
+                        }
+                       
                     }else{
 
-                        const newToken = await generateToken({ userId: user.id });
-
-                        let updateData = await {
+                        updateData = await {
                             "token"     : newToken,
-                            "password"  : hashedPassword,
+                            "password_ad"  : hashedPassword,
                         }
-
-                        const sql = 'UPDATE officer SET ? WHERE username = ?'; 
-                
-                        db.query(sql, [updateData, username], function (err, result2, fields) {
-            
-                            return res.json({userdata: user, token:newToken})
-                            
-                        });
-
-
                     }
+
+                    console.log(updateData);
+                    const sql = await 'UPDATE admin SET ? WHERE username = ?'; 
+                
+                    db.query(sql, [updateData, username], function (err, result2, fields) {
+        
+                        return res.json({userdata: user, token:newToken})
+                        
+                    });
 
                 })
 
@@ -186,8 +196,10 @@ router.route('/backoffice/create/user')
 
     try {
 
+        const hashedPassword = await bcrypt.hash(req.body.password, 10)
         let user = {
             "username"      : req.body.username,
+            "password"      : hashedPassword,
             "name"          : req.body.name,
             "lastname"      : req.body.lastname,
             "position"      : req.body.position,
@@ -239,7 +251,10 @@ router.route('/backoffice/edit/user')
 
     try {
 
+        const hashedPassword = await bcrypt.hash(req.body.password, 10)
+
         let user = {
+            "password"      : hashedPassword,
             "name"          : req.body.name,
             "lastname"      : req.body.lastname,
             "position"      : req.body.position,

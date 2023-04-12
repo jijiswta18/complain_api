@@ -85,7 +85,7 @@ function generateStrongPassword(length) {
 // uoload image
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads');
+        cb(null, 'public/uploads/user');
     },
 
     filename: function (req, file, cb) {
@@ -1062,7 +1062,7 @@ router.route('/user/get/complainStep/:id')
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}'`
+        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
         // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){

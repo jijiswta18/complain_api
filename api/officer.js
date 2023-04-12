@@ -28,9 +28,11 @@ moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 // uoload image
-var storage = multer.diskStorage({
+var storage_step = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads/step');
+
+        console.log(req.body);
+        cb(null, 'public/uploads/backoffice/step');
     },
 
     filename: function (req, file, cb) {
@@ -46,10 +48,41 @@ var storage = multer.diskStorage({
     }
 });
 
-var upload = multer({ storage: storage });
+var upload_step = multer({ storage: storage_step });
+
+// uoload image
+var storage_corrupt = multer.diskStorage({
+    destination: function (req, file, cb) {
+
+        console.log(req.body);
+        cb(null, 'public/uploads/backoffice/corrupt');
+    },
+
+    filename: function (req, file, cb) {
+        let newFileName         =   req.body.image_name
+       cb(null, newFileName);
+    },
+    limits: {
+        fileSize: 100000
+    },
+    onFileSizeLimit: function (file) {
+        console.log('Failed: ' + file.originalname + ' is limited')
+        fs.unlink(file.path)
+    }
+});
+
+var upload_corrupt = multer({ storage: storage_corrupt });
+
+
 
 router.route('/backoffice/uploadStepFiles')
-.post(upload.single('images'), async (req, res, next) => {
+.post(upload_step.single('images'), async (req, res, next) => {
+
+    res.send(req.files);
+})
+    
+router.route('/backoffice/uploadCorruptFiles')
+.post(upload_corrupt.single('images'), async (req, res, next) => {
 
     res.send(req.files);
 })
@@ -99,16 +132,18 @@ router.route('/backoffice/login')
 
                     let  newToken = await generateToken({ userId: user.id });
 
+                  
+
                     if(err){
                         if(await bcrypt.compare(password, user.password)){
-                            console.log('======');
+                    
                             updateData = await {
                                 "token"     : newToken,
                                 "password"  : hashedPassword,
                             }
     
                         }else{
-                            console.log('1111');
+
                             res.status(400).send("error : password error");
                         }
                        
@@ -291,7 +326,7 @@ router.route('/backoffice/edit/user')
 
 
 
-router.route('/backoffice/complainStep')
+router.route('/backoffice/create/complainStep')
 .post (async (req,res, next) => { 
 
     try {
@@ -303,6 +338,7 @@ router.route('/backoffice/complainStep')
             "detail"        : req.body.detail,
             "date"          : date,
             "status_call"   : req.body.status_call,
+            "check_corrupt" : req.body.check_corrupt,
             "create_by"     : req.body.create_by,
             "create_date"   : date,
             "modified_by"   : req.body.modified_by,
@@ -368,6 +404,47 @@ router.route('/backoffice/complainStep')
         //     return res.json(result)
         // })
         
+    } catch (error) {
+        console.log(error);
+    }
+
+});
+
+router.route('/backoffice/create/complainCorrupt')
+.post (async (req,res, next) => { 
+
+    try {
+
+        let item = {
+            "complain_step_id"  : req.body.complain_step_id,
+            "reference_code"    : req.body.reference_code,
+            "date"              : req.body.date,
+            "detail"            : req.body.detail,
+            "create_by"         : req.body.create_by,
+            "modified_by"       : req.body.modified_by,
+            "create_date"       : date,
+            "modified_date"     : date
+        }
+    
+        let sql = "INSERT INTO employee_complain_corrupt SET ? "
+
+
+        db.query(sql,item, async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            item = [{'id':results.insertId, ...item}]
+
+            const result = {
+                "status": 200,
+                "complain_corrupt_id": results.insertId,
+            }
+
+            return res.json(result)
+        })  
     } catch (error) {
         console.log(error);
     }
@@ -475,6 +552,51 @@ router.route('/backoffice/complainStepFiles')
 
    
 })
+router.route('/backoffice/complainCorruptFiles')
+.post(async (req, res, next) => {
+
+    console.log('======',req.body);
+
+    try {
+
+        let item = await {
+            "file_original"     : req.body.file_original,
+            "file_name"         : req.body.file_name,
+            "complain_step_id"  : req.body.complain_step_id,
+            "create_by"         : req.body.admin_id,
+            "create_date"       : date,
+            "modified_by"       : req.body.admin_id,
+            "modified_date"     : date
+        }
+
+        let sql = await "INSERT INTO employee_corrupt_files SET ?"
+
+        db.query(sql, item, async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            item = await [{'id' : results.insertId, ...item}]
+
+            const result = {
+                "status": 200,
+                "data": results.insertId
+              }
+  
+            return res.json(result)
+
+        })
+
+    } catch (error) {
+        console.log('uploadFile', error);
+    }
+  
+ 
+
+   
+})
 
 router.route('/backoffice/get/listFollow/:id')
 .get(async (req, res, next) => {
@@ -503,5 +625,33 @@ router.route('/backoffice/get/listFollow/:id')
 })
 
 
+router.route('/backoffice/get/complainStep/:id')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}'` 
+        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
+
+        db.query(sql, async function(err, result, fields){
+
+            console.log(sql);
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
 
 module.exports = router

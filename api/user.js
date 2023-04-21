@@ -15,11 +15,10 @@ const CryptoJS      = require("crypto-js");
 const Buffer        = require('buffer/').Buffer
 const fs            = require('fs');
 
-
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 
-
+// router.use(express.static('public'));
 
 router.use(cors({
     //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
@@ -598,9 +597,6 @@ router.route('/user/register')
     }
 })
 
-
-
-
 router.route('/user/checkMail')
 .post(async (req, res, next) => {
 
@@ -1117,7 +1113,7 @@ router.route('/user/getUrlFiles')
 
     try {
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
-        const url               = await fullUrl+"/uploads/"+req.query.filename;
+        const url               = await fullUrl+"/uploads/user/"+req.query.filename;
         const imageUrlData      = await fetch(url);
         const buffer            = await imageUrlData.arrayBuffer();
         const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
@@ -1125,6 +1121,7 @@ router.route('/user/getUrlFiles')
         const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
 
 
+        console.log(url);
         
         // console.log(imageBas64);
 

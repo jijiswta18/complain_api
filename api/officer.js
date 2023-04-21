@@ -7,6 +7,10 @@ const db            = require('../config/db') // เรียกใช้งา�
 const bcrypt        = require('bcrypt')
 const jwt           = require('jsonwebtoken')
 const ldap          = require('ldapjs')
+const bodyParser    = require('body-parser')
+
+router.use(bodyParser.json());
+router.use(bodyParser.urlencoded({ extended: false }));
 
 router.use(cors({
     //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
@@ -27,7 +31,7 @@ const adConfiguration = {
 moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-// uoload image
+// uoload file_complain_step
 var storage_step = multer.diskStorage({
     destination: function (req, file, cb) {
 
@@ -50,7 +54,7 @@ var storage_step = multer.diskStorage({
 
 var upload_step = multer({ storage: storage_step });
 
-// uoload image
+// uoload file_corrupt
 var storage_corrupt = multer.diskStorage({
     destination: function (req, file, cb) {
 
@@ -104,6 +108,7 @@ router.route('/backoffice/login')
     try {
         const username = await req.body.username
         const password = await req.body.password
+
 
         const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -359,6 +364,7 @@ router.route('/backoffice/create/complainStep')
             let user = {
                
                 "status_call"   : req.body.status_call,
+                "admin_id"      : req.body.admin_id,
                 "modified_by"   : req.body.modified_by,
                 "modified_date" : date
             }
@@ -452,12 +458,14 @@ router.route('/backoffice/create/complainCorrupt')
 });
 
 
-router.route('/backoffice/get/listComplain/:id')
+router.route('/backoffice/get/listComplain')
+// router.route('/backoffice/get/listComplain/:id')
 .get(async (req, res, next) => {
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}' AND status_call = 0`
+        const sql = await "SELECT * FROM employee_complain WHERE status_call = 0"
+        // const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}' AND status_call = 0`
 
         db.query(sql, async function(err, result, fields){
             
@@ -562,6 +570,7 @@ router.route('/backoffice/complainCorruptFiles')
         let item = await {
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
+            "file_type"         : req.body.file_type,
             "complain_step_id"  : req.body.complain_step_id,
             "create_by"         : req.body.admin_id,
             "create_date"       : date,
@@ -603,7 +612,7 @@ router.route('/backoffice/get/listFollow/:id')
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}' AND status_call != 0`
+        const sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${req.params.id}' AND status_call != 0`
 
         db.query(sql, async function(err, result, fields){
             
@@ -631,6 +640,49 @@ router.route('/backoffice/get/complainStep/:id')
     try {
 
         const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}'` 
+
+        db.query(sql, async function(err, results, fields){
+
+            if(results){
+
+                results.forEach(async function  callback(result, index) {
+   
+        
+                    var sql_files = await "SELECT * FROM employee_operation_files WHERE complain_step_id = " + `'${result.id}'`
+
+                    db.query(sql_files, async function(err, result2, fields){
+
+                        if (err) throw err;
+
+
+                        results = Object.assign({"files": result2}, result)                 
+                     
+                    })
+      
+                });
+  
+            }
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+
+
+
+
+
+
+
+router.route('/backoffice/get/CorruptFiles/:id')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_corrupt_files  WHERE complain_step_id = " + `'${req.params.id}'` 
         // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){
@@ -653,5 +705,61 @@ router.route('/backoffice/get/complainStep/:id')
     }
 
 })
+
+
+
+router.route('/backoffice/getUrlFiles')
+.get(async (req,res, next)=> { 
+
+    try {
+        const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
+        const url               = await fullUrl+"/uploads/step/"+req.query.filename;
+        const imageUrlData      = await fetch(url);
+        const buffer            = await imageUrlData.arrayBuffer();
+        const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
+        const contentType       = await imageUrlData.headers.get('content-type');
+        const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
+
+
+        console.log(url);
+        
+        // console.log(imageBas64);
+
+        await res.send(imageBas64)
+              
+    } catch (error) {
+
+        console.log(error);
+        
+    }
+
+});
+
+router.route('/backoffice/getUrlFilesCorrupt')
+.get(async (req,res, next)=> { 
+
+    try {
+        const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
+        const url               = await fullUrl+"/uploads/corrupt/"+req.query.filename;
+        const imageUrlData      = await fetch(url);
+        const buffer            = await imageUrlData.arrayBuffer();
+        const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
+        const contentType       = await imageUrlData.headers.get('content-type');
+        const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
+
+
+        console.log(url);
+        
+        // console.log(imageBas64);
+
+        await res.send(imageBas64)
+              
+    } catch (error) {
+
+        console.log(error);
+        
+    }
+
+});
 
 module.exports = router

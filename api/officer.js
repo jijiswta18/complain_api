@@ -36,7 +36,7 @@ var storage_step = multer.diskStorage({
     destination: function (req, file, cb) {
 
         console.log(req.body);
-        cb(null, 'public/uploads/backoffice/step');
+        cb(null, 'public/uploads/complain_step');
     },
 
     filename: function (req, file, cb) {
@@ -59,7 +59,7 @@ var storage_corrupt = multer.diskStorage({
     destination: function (req, file, cb) {
 
         console.log(req.body);
-        cb(null, 'public/uploads/backoffice/corrupt');
+        cb(null, 'public/uploads/corrupt');
     },
 
     filename: function (req, file, cb) {
@@ -643,25 +643,47 @@ router.route('/backoffice/get/complainStep/:id')
 
         db.query(sql, async function(err, results, fields){
 
-            if(results){
+               
+                if (err) res.status(500).json({
+                    "status": 500,
+                    "message": "Internal Server Error" // error.sqlMessage
+                })
 
-                results.forEach(async function  callback(result, index) {
+                res.status(200).json({
+                    data: results,
+                    message: "success"
+                }); 
+
+            // if(results){
+
+            //     console.log(results);
+
+            //     results.forEach(async function  callback(result, index) {
    
         
-                    var sql_files = await "SELECT * FROM employee_operation_files WHERE complain_step_id = " + `'${result.id}'`
+            //         var sql_files = await "SELECT * FROM employee_operation_files WHERE complain_step_id = " + `'${result.id}'`
 
-                    db.query(sql_files, async function(err, result2, fields){
+            //         db.query(sql_files, async function(err2, result2, fields2){
 
-                        if (err) throw err;
+            //             if (err) throw err;
 
 
-                        results = Object.assign({"files": result2}, result)                 
+            //             results = Object.assign({"files": result2}, result)        
+                        
+                    
                      
-                    })
+            //         })
+
+            //         console.log(results);
       
-                });
+            //     });
+            //     res.status(200).json({
+            //         data: results,
+            //         message: "success"
+            //     }); 
+
   
-            }
+            // }
         })
 
     } catch (error) {
@@ -683,6 +705,35 @@ router.route('/backoffice/get/CorruptFiles/:id')
     try {
 
         const sql = await "SELECT * FROM employee_corrupt_files  WHERE complain_step_id = " + `'${req.params.id}'` 
+        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
+
+        db.query(sql, async function(err, result, fields){
+
+            console.log(sql);
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+router.route('/backoffice/get/ComplainStepFiles/:id')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_operation_files  WHERE complain_step_id = " + `'${req.params.id}'` 
         // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){

@@ -725,11 +725,13 @@ router.route('/backoffice/get/complainStep/:id')
 
     try {
 
-        const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date, b.file as corrupt_file, b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'`
+        const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'`
 
         // const sql = await "SELECT * FROM employee_complain_step   WHERE complain_id = " + `'${req.params.id}'` 
 
         db.query(sql, async function(err, results, fields){
+
+            console.log(err);
 
                 if (err) res.status(500).json({
                     "status": 500,

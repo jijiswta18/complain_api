@@ -2,6 +2,7 @@ const express       = require('express');
 const cors          = require('cors');
 const moment        = require('moment');
 const multer        = require('multer');
+const auth          = require('../middleware/auth')
 const router        = express.Router();
 const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 const bcrypt        = require('bcrypt');
@@ -80,7 +81,6 @@ function generateStrongPassword(length) {
     return password.join('');
 }
 
-
 // uoload image
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -100,67 +100,127 @@ var storage = multer.diskStorage({
     }
 });
 
-
 var upload = multer({ storage: storage });
 
 
+router.route('/user/get/complainDetail/:id')
+.get(auth, async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM employee_complain WHERE id = " + `'${req.params.id}'`
+        db.query(sql, async function(err, result, fields){
+            
+            if(result){
+                let sql_files = await "SELECT * FROM employee_files WHERE complain_id = " + `'${req.params.id}'`
 
-router.route('/user/uploadFiles')
-.post(upload.single('images'), async (req, res, next) => {
+                db.query(sql_files, async function(err, result2, fields){
 
-    res.send(req.files);
+                    if (err) res.status(500).json({
+                        "status": 500,
+                        "message": "Internal Server Error" // error.sqlMessage
+                    })
+        
+
+                    res.status(200).json({
+                        data: result,
+                        data_files : result2,
+                        message: "success"
+                    }); 
+                })
+            }
+
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
 })
-    
-
-// Create a nodemailer transport for sending emails
-// const transporter = nodemailer.createTransport({
-
-//     host: 'mx.cgd.go.th',
-//     port: 25,
-//     secure: false,
-//     // service: "gmail",
-//     auth: {
-//       user: "democom3@cgd.go.th",
-//     }
-//   });
 
 
-// function  insertUploadFile (data){
+router.route('/user/get/listFollow/:id')
+.get(auth, async (req, res, next) => {
 
-//     let item_employee = await {
-//         "file_name"         : data.file_name,
-//         "complain_id"       : data.id,
-//         "create_date"       : date,
-//         "modified_by"       : results.insertId,
-//         "modified_date"     : date,
-//     }
+    try {
 
-//     let sql =  "INSERT INTO employee_register SET ?"
+        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}'`
 
-//     db.query(sql,item_register, async function (error,results,fields){
+        db.query(sql, async function(err, result, fields){
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
 
-//     })
-// }
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+
+
+router.route('/user/get/complainStep/:id')
+.get(auth, async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
+        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
+
+        db.query(sql, async function(err, result, fields){
+
+            console.log(sql);
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
 
 router.route('/user/login')
 .post(async (req, res, next) => {
     try {
         const email = await req.body.email
         const password = await req.body.password
+
     
         const sql = await 'SELECT * FROM employee_register WHERE email = ?';
     
     
         db.query(sql, email, async function (err, result, fields){
-    
+
             let user = await null
     
             if(result){
     
                 user = await result[0]
-                
+                console.log('=======', user);
                
                 if(user && (await bcrypt.compare(password, user.password))){
+
+                  
 
                     console.log(await bcrypt.compare(password, user.password));
         
@@ -321,81 +381,6 @@ router.route('/user/forgot-password')
 
 })
 
-// router.route('/user/forgot-password')
-// .post(async (req, res, next) => {
-
-//     const { email } = req.body;
-
-//     try {
-
-//         var randomstring = Math.random().toString(36).slice(-8);
-
-//         // console.log('randomstring',randomstring);
-    
-//         // Send the password reset email
-//         const mailOptions = {
-//           from: "sawitta.sri@cgd.go.th",
-//           to: email,
-//           subject: "Password Reset Request",
-//           text: `Please follow this link to reset your password: http://localhost:8080/`
-//         };
-   
-//         // await transporter.sendMail(mailOptions);
-
-//         const hashedPassword = await bcrypt.hash(ciphertext, 10)
-    
-//         const sql = await 'SELECT * FROM register WHERE email = ?';
-    
-    
-//         db.query(sql, email, async function (err, result, fields){
-    
-//             let user = await null
-    
-//             if(result){
-    
-//                 user = await result[0]
-        
-//                 if(user){
-        
-        
-//                     let updateData = await {
-//                     "password"       : hashedPassword,
-//                     "modified_by"    : user.id,
-//                     "modified_date"  : date,
-//                     }
-            
-//                     const sql_update = await 'UPDATE register SET ? WHERE id = ?'; 
-            
-//                     db.query(sql_update, [updateData, user.id], function (err, result2, fields) {
-                
-//                         // console.log('=========', result2);
-            
-//                         // Return a success response to the client
-//                         res.status(200).json({
-//                             message: "Password reset email sent! Please check your inbox."
-//                         });
-            
-//                     });
-            
-//                 }else{
-//                     res.status(400).send("error : password error");
-//                 }
-    
-//             }else{
-//                 res.status(400).send("error : no user in the system");
-//             }
-    
-//         });
-
-//       } catch (error) {
-//         // Return an error response to the client
-//         res.status(500).json({
-//           message: "An error occurred while processing your request. Please try again later."
-//         });
-//       }
-
-// })
-
 router.route('/user/forgot/reset-password')
 .post(async (req, res, next) => {
 
@@ -466,7 +451,6 @@ router.route('/user/forgot/reset-password')
     }
 })
 
-
 router.route('/user/reset-password')
 .post(async (req, res, next) => {
 
@@ -507,7 +491,7 @@ router.route('/user/register')
 
         const password = generateStrongPassword(12);
 
-        const hashedPassword = await bcrypt.hash(password, 10)
+        const hashedPassword = await bcrypt.hash(password, 12)
 
         let item_register = await {
             "email"             : req.body.email,
@@ -568,16 +552,17 @@ router.route('/user/register')
             
                 // Send the password reset email
                 const mailOptions = await {
-                    from: "democom3@cgd.go.th",
+                    from: "noreply@cgd.go.th",
                     to: req.body.email,
                     subject: "ลงทะเบียนสำเร็จ",
                     password: `${password}`,
                     text: `
-                        email : ${req.body.email} </br>
-                        password : ${password} </br>
+                        URL : http://localhost:8080/
+                        username : ${req.body.email} 
+                        password : ${password} 
                         เข้าสู่เว็บไซต์ คลิก : http://localhost:8080/`
                 };
-                smtpTransport.sendMail(mailOptions, function(error, response){
+                await smtpTransport.sendMail(mailOptions, function(error, response){
                     smtpTransport.close();
                     if(error){
                         console.log(error);
@@ -622,76 +607,6 @@ router.route('/user/checkMail')
         console.log("errorCreateUser :",  error);
     }
 })
-
-// router.route('/user/complain')
-// .post(async (req, res, next) => {
-//     try {
-
-//         let item = req.body
-
-//         // let item_complain = await {
-//         //     "name"              : req.body.employee_name,
-//         //     "lastname"          : req.body.employee_lastname,
-//         //     "register_id"       : results.insertId,
-//         //     "division"          : req.body.employee_division,
-//         //     "description_face"  : req.body.employee_description,
-//         //     "topic"             : req.body.complain_topic,
-//         //     "start_date"        : req.body.complain_start_date,
-//         //     "end_date"          : req.body.complain_end_date,
-//         //     "detail"            : req.body.complain_detail,
-//         //     "create_by"         : results.insertId,
-//         //     "create_date"       : date,
-//         //     "modified_by"       : results.insertId,
-//         //     "modified_date"     : date,
-//         // }
-
-//         // insert table employee_register
-    
-//         let sql = await "INSERT INTO employee_complain SET ?"
-    
-//         db.query(sql,item, async function (error,results,fields){
-
-//             console.log(error);
-    
-//             if (error) return res.status(500).json({
-//                 "status": 500,
-//                 "message": "Internal Server Error" // error.sqlMessage
-//             })
-
-//             item = await [{'id' : results.insertId,...item}]
-
-//             // const dateYear = moment().add(543, 'year').format("YY")
-
-
-//             // const refId =  this.date = dateYear + '01' + '000'+ results.insertId
-
-            
-//             // let updateData = await {
-//             //     "create_date"   : date,
-//             //     "modified_date" : date,
-//             //     "ref_id"        : refId
-//             // }
-
-//             // console.log(updateData);
-  
-//             // const sql_update = await 'UPDATE employee_complain SET ? WHERE id = ?'
-    
-//             // db.query(sql_update, [updateData, results.insertId], async function (err, results2, fields){
-                
-//                 const result = {
-//                     "status"        : 200,
-//                     "complain_id"   : results.insertId,
-//                 }
-//                 return res.json(result)
-//             // })  
-//         })
-        
-//     } catch (error) {
-//         console.log("complain :",  error);
-//     }
-// })
-
-
 
 router.route('/user/complain')
 .post(async (req, res, next) => {
@@ -922,216 +837,12 @@ router.route('/user/edit/profile')
         console.log("errorCreateUser :",  error);
     }
 })
-router.route('/user/create')
-.post(async (req, res, next) => {
-    try {
 
-        const password = await req.body.password
-        const hashedPassword = await bcrypt.hash(password, 10)
+router.route('/user/uploadFiles')
+.post(upload.single('images'), async (req, res, next) => {
 
-        let item = await {
-            "name"              : req.body.name,
-            "lastname"          : req.body.lastname,
-            "username"          : req.body.username,
-            "password"          : hashedPassword,
-            "email"             : req.body.email,
-            "check_policy"      : req.body.check_policy,
-            "roles"             : "user",
-            "create_date"       : date,
-            "modified_date"     : date
-        }
-    
-        let sql = await "INSERT INTO register SET ?"
-    
-        db.query(sql,item, async function (error,results,fields){
-    
-            if (error) return res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-            item = await [{'id' : results.insertId, ...item}]
-    
-            let updateData = await {
-              "create_by"   : results.insertId,
-              "modified_by" : results.insertId,
-            }
-    
-            const sql_update = await 'UPDATE register SET ? WHERE id = ?'
-    
-            db.query(sql_update, [updateData, results.insertId], function (err, results2, fields){
-    
-                const result = {
-                  "status": 200,
-                  "data": item.id
-                }
-    
-                return res.json(result)
-            })
-            
-        })
-        
-    } catch (error) {
-        console.log("errorCreateUser :",  error);
-    }
+    res.send(req.files);
 })
-
-
-router.route('/user/get/listFollow/:id')
-.get(async (req, res, next) => {
-
-    try {
-
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}'`
-
-        db.query(sql, async function(err, result, fields){
-            
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-
-    } catch (error) {
-        console.log(error);     
-    }
-
-})
-
-
-router.route('/user/get/complainDetail/:id')
-.get(async (req, res, next) => {
-
-    try {
-
-        // const sql = "SELECT employee_complain*, employee_files* FROM employee_complain  LEFT JOIN employee_files on employee_complain.id = employee_files.complain_id WHERE employee_complain.id = " + `'${req.params.id}'`
-
-        const sql = await "SELECT * FROM employee_complain WHERE id = " + `'${req.params.id}'`
-
-        db.query(sql, async function(err, result, fields){
-            
-            if(result){
-                let sql_files = await "SELECT * FROM employee_files WHERE complain_id = " + `'${req.params.id}'`
-
-                db.query(sql_files, async function(err, result2, fields){
-
-                    if (err) res.status(500).json({
-                        "status": 500,
-                        "message": "Internal Server Error" // error.sqlMessage
-                    })
-        
-
-                    res.status(200).json({
-                        data: result,
-                        data_files : result2,
-                        message: "success"
-                    }); 
-                })
-            }
-
-            // console.log(err);
-            
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-
-            // res.status(200).json({
-            //     data: result,
-            //     message: "success"
-            // }); 
-        })
-
-    } catch (error) {
-        console.log(error);     
-    }
-
-})
-
-router.route('/user/get/complainStep/:id')
-.get(async (req, res, next) => {
-
-    try {
-
-        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
-        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
-
-        db.query(sql, async function(err, result, fields){
-
-            console.log(sql);
-            
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-
-    } catch (error) {
-        console.log(error);     
-    }
-
-})
-
-
-// router.route('/user/getUrlFiles')
-// .get(async (req,res, next)=> { 
-
-//     try {
-
-//         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
-//         const url               = await fullUrl+"/uploads/"+req.query.filename;
-//         // const imageUrl          = await url;
-//         // const imageUrlData      = await fetch(imageUrl);
-//         // const buffer            = await imageUrlData.arrayBuffer();
-
-//         const base64Buffer =        await Buffer.from(url, 'binary').toString('base64');
-//         // const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
-//         // const contentType       = await imageUrlData.headers.get('content-type');
-//         // const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
-
-//         await res.send(base64Buffer)
-              
-//     } catch (error) {
-
-//         console.log(error);
-        
-//     }
-
-// });
-router.route('/user/getUrlFiles')
-.get(async (req,res, next)=> { 
-
-    try {
-        const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
-        const url               = await fullUrl+"/uploads/user/"+req.query.filename;
-        const imageUrlData      = await fetch(url);
-        const buffer            = await imageUrlData.arrayBuffer();
-        const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
-        const contentType       = await imageUrlData.headers.get('content-type');
-        const imageBas64        = await `data:image/${contentType};base64,${stringifiedBuffer}`;
-
-
-        console.log(url);
-        
-        // console.log(imageBas64);
-
-        await res.send(imageBas64)
-              
-    } catch (error) {
-
-        console.log(error);
-        
-    }
-
-});
+    
 
 module.exports = router

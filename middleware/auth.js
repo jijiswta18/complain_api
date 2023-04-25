@@ -8,7 +8,7 @@ const verifyToken = (req, res, next) => {
     const authorization = req.headers['authorization'] 
 
 
-    console.log(authorization);
+    // console.log(authorization);
 
 
    

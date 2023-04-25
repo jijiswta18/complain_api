@@ -834,12 +834,11 @@ router.route('/user/complain')
 
 router.route('/user/files')
 .post(async (req, res, next) => {
-
     try {
-
         let item = await {
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
+            "file_type"         : req.body.file_type,
             "register_id"       : req.body.register_id,
             "complain_id"       : req.body.complain_id,
             "create_by"         : req.body.register_id,

@@ -284,10 +284,10 @@ router.route('/backoffice/edit/user')
 
     try {
 
-        const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        // const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
         let user = {
-            "password"      : hashedPassword,
+            // "password"      : hashedPassword,
             "name"          : req.body.name,
             "lastname"      : req.body.lastname,
             "position"      : req.body.position,
@@ -295,14 +295,12 @@ router.route('/backoffice/edit/user')
             "roles"         : req.body.roles,
             "status"        : req.body.status,
             "state"         : req.body.state,
-            "modified_by"   : req.body.userId,
+            "modified_by"   : req.body.admin_id,
             "modified_date" : date
         }
-    
+
         let sql = "UPDATE admin SET ? WHERE id = ?"
-        db.query(sql, [user, req.body.userId], (error,results,fields)=>{
-    
-            
+        db.query(sql, [user, req.body.user_id], (error,results,fields)=>{
             if (error) return res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
@@ -613,6 +611,7 @@ router.route('/backoffice/complainStepFiles')
         let item = await {
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
+            "file_type"         : req.body.file_type,
             "register_id"       : req.body.register_id,
             "complain_step_id"  : req.body.complain_step_id,
             "create_by"         : req.body.register_id,
@@ -693,15 +692,25 @@ router.route('/backoffice/complainCorruptFiles')
    
 })
 
-router.route('/backoffice/get/listFollow/:id')
+router.route('/backoffice/get/listFollow')
 .get(async (req, res, next) => {
-
     try {
 
-        const sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${req.params.id}' AND status_call != 0`
+        let id = req.query.id
+        let roles = req.query.roles
+
+        let sql = ''
+
+        if(roles == 'general'){
+             sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0`
+        } else if(roles == 'admin'){
+             sql = await "SELECT * FROM employee_complain WHERE status_call != 0"
+        }
+
+        console.log(sql);
 
         db.query(sql, async function(err, result, fields){
-            
+
             if (err) res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
@@ -725,7 +734,7 @@ router.route('/backoffice/get/complainStep/:id')
 
     try {
 
-        const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'`
+        const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'` + "ORDER BY a.id"
 
         // const sql = await "SELECT * FROM employee_complain_step   WHERE complain_id = " + `'${req.params.id}'` 
 

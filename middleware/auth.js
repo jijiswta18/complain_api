@@ -8,6 +8,8 @@ const verifyToken = (req, res, next) => {
     const authorization = req.headers['authorization'] 
 
 
+    console.log(authorization);
+
 
    
     if(authorization===undefined) return res.status(401).json({

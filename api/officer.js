@@ -108,7 +108,7 @@ router.route('/backoffice/get/listComplain')
 router.route('/get/registerDetail/:id')
 .get(auth, async (req, res, next) => {
     try {
-        const sql = await "SELECT id, email, name, lastname, gender, age, phone, phone_other  FROM employee_register WHERE id = " + `'${req.params.id}'`
+        const sql = await "SELECT id, email, name, lastname, gender, age, phone, phone_other, address  FROM employee_register WHERE id = " + `'${req.params.id}'`
         db.query(sql, async function(err, result, fields){
             if (err) res.status(500).json({
                 "status": 500,

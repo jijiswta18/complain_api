@@ -620,11 +620,15 @@ router.route('/backoffice/edit/complainCorrupt')
             "modified_by"       : req.body.admin_id,
             "modified_date"     : date
         }
+
+        console.log(item);
     
         let sql = "UPDATE employee_complain_corrupt SET ? WHERE id = ?"
 
 
-        db.query(sql,[item, req.body.complain_step_id], async function (error,results,fields){
+        db.query(sql,[item, req.body.corrupt_id], async function (error,results,fields){
+
+            console.log(error);
 
             if (error) return res.status(500).json({
                 "status": 500,

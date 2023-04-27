@@ -591,16 +591,22 @@ router.route('/user/checkMail')
 
         db.query(sql, async function (error,results,fields){
 
-            if (results.length == 0) {
-                
-                return res.status(500).json({
-                    "status": 500,
-                    "message": "no e-mail" // error.sqlMessage
+            // let email = await null
+          
+            if(results.length == 0){
+                return res.status(200).json({
+                    "status": 200,
+                    "message": "no email" // error.sqlMessage
                 })
             }else{
-                const result = {"status" : 200, }
-                return res.json(result)
+                return res.status(500).json({
+                    "status": 500,
+                    "message": "email" // error.sqlMessage
+                })
+          
+              
             }
+
         })
         
     } catch (error) {

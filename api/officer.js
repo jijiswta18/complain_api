@@ -198,7 +198,8 @@ router.route('/backoffice/get/ComplainStepFiles/:id')
 router.route('/backoffice/get/CorruptFiles/:id')
 .get(auth, async (req, res, next) => {
     try {
-        const sql = await "SELECT * FROM employee_corrupt_files  WHERE complain_step_id = " + `'${req.params.id}'` 
+        const sql = await "SELECT * FROM employee_corrupt_files  WHERE corrupt_id = " + `'${req.params.id}' AND check_remove = 0`
+
         db.query(sql, async function(err, result, fields){
 
             if (err) res.status(500).json({
@@ -596,7 +597,7 @@ router.route('/backoffice/create/complainCorrupt')
 
             const result = {
                 "status": 200,
-                "complain_corrupt_id": results.insertId,
+                "corrupt_id": results.insertId,
             }
 
             return res.json(result)
@@ -613,7 +614,7 @@ router.route('/backoffice/edit/complainCorrupt')
     try {
 
         let item = {
-            "complain_step_id"  : req.body.complain_step_id,
+            // "complain_step_id"  : req.body.complain_step_id,
             "reference_code"    : req.body.reference_code,
             "date"              : req.body.date,
             "detail"            : req.body.detail,
@@ -637,6 +638,7 @@ router.route('/backoffice/edit/complainCorrupt')
 
             const result = {
                 "status": 200,
+                "corrupt_id" : req.body.corrupt_id
             }
 
             return res.json(result)
@@ -697,45 +699,33 @@ router.route('/backoffice/complainStepFiles')
 router.route('/backoffice/complainCorruptFiles')
 .post(async (req, res, next) => {
     try {
-
         let item = await {
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
             "file_type"         : req.body.file_type,
-            "complain_step_id"  : req.body.complain_step_id,
+            "corrupt_id"        : req.body.corrupt_id,
+            "check_remove"      : req.body.check_remove,
             "create_by"         : req.body.admin_id,
             "create_date"       : date,
             "modified_by"       : req.body.admin_id,
             "modified_date"     : date
         }
-
         let sql = await "INSERT INTO employee_corrupt_files SET ?"
-
         db.query(sql, item, async function (error,results,fields){
-
             if (error) return res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
             })
-
             item = await [{'id' : results.insertId, ...item}]
-
             const result = {
                 "status": 200,
                 "data": results.insertId
               }
-  
             return res.json(result)
-
         })
-
     } catch (error) {
         console.log('uploadFile', error);
-    }
-  
- 
-
-   
+    }  
 })
 
 

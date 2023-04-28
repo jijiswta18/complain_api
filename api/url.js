@@ -1,7 +1,9 @@
 
 const express       = require('express')
 const auth          = require('../middleware/auth')
-const cors          = require('cors');
+const cors          = require('cors')
+const moment        = require('moment')
+const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
 const router        = express.Router()
 const fetch         = require('node-fetch')
 const bodyParser    = require('body-parser');
@@ -16,29 +18,9 @@ router.use(cors({
 origin: '*'
 }))
 
-router.route('/get/pdf/UrlFilesComplains')
-.post(async (req, res, next) => {
 
-    try {
-
-        console.log(req.body);
-
-        // var data =fs.readFileSync("public/uploads/user/"+req.body.filename);
-        // res.contentType("application/pdf");
-        // res.send(data);
-        // const url               = await "public/uploads/user/"+req.query.filename;
-
-        // console.log(req.query.filename);
-
-
-        // await res.download(url);       
-    } catch (error) {
-        console.log(error);  
-    }
-  
-});
-
-
+moment.locale('th');
+let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 router.route('/get/pdf/UrlFilesComplain')
 .get(auth, async (req,res, next)=> { 
@@ -122,18 +104,6 @@ router.route('/get/pdf/UrlFilesCorrupt')
     }
 
 });
-// router.route('/get/pdf/UrlFilesCorrupt')
-// .get(auth, async (req,res, next)=> { 
-//     try {
-//         const url               = await "public/uploads/corrupt/"+req.query.filename;
-//         res.download(url, function (error) {
-//             console.log("Error : ", error)
-//         });       
-//     } catch (error) {
-//         console.log(error);  
-//     }
-  
-// });
 
 router.route('/get/UrlFilesCorrupt')
 .get(auth, async (req,res, next)=> { 
@@ -150,5 +120,45 @@ router.route('/get/UrlFilesCorrupt')
         console.log(error);  
     }
 });
+
+
+router.route('/update/deleteCorruptFiles')
+.post(auth, async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove"  : req.body.check_remove,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+
+        console.log(item);
+
+        let sql = "UPDATE employee_corrupt_files SET ? WHERE id = " + req.body.id
+
+        db.query(sql, item, (error,results,fields)=>{
+
+            console.log(sql);
+    
+            console.log(results);
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+
 
 module.exports = router

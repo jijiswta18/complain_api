@@ -216,7 +216,7 @@ router.route('/user/login')
             if(result){
     
                 user = await result[0]
-                console.log('=======', user);
+
                
                 if(user && (await bcrypt.compare(password, user.password))){
 
@@ -487,6 +487,10 @@ router.route('/user/reset-password')
 
 router.route('/user/register')
 .post(async (req, res, next) => {
+
+    console.log(`${req.protocol}://${req.hostname}`);
+
+    `${req.protocol}://${req.hostname}`
     try {
 
         const password = generateStrongPassword(12);
@@ -557,10 +561,9 @@ router.route('/user/register')
                     subject: "ลงทะเบียนสำเร็จ",
                     password: `${password}`,
                     text: `
-                        URL : http://localhost:8080/
+                        URL : ${req.protocol}://${req.hostname}/user/login
                         username : ${req.body.email} 
-                        password : ${password} 
-                        เข้าสู่เว็บไซต์ คลิก : http://localhost:8080/`
+                        password : ${password} `
                 };
                 await smtpTransport.sendMail(mailOptions, function(error, response){
                     smtpTransport.close();

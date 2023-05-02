@@ -254,6 +254,60 @@ router.route('/backoffice/get/userDetail/:id')
     })
 })
 
+router.route('/backoffice/get/listRegister')
+.get(auth, async (req, res, next) => { 
+
+    try {
+        // let id = req.query.id
+        // let sql = ''
+
+        // if(id != undefined){
+        //     sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, district_id, subdistrict_id, postcode FROM employee_register WHERE id = " + `'${id}'`;
+        // }else{
+            const sql = 'SELECT id, email, name, lastname, phone, create_date FROM employee_register ';
+        // }
+
+        db.query(sql, async function(err, results, fields){
+            if (err) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            const result = {
+                "status": 200,
+                "data"  : results, 
+            }
+            return res.json(result)
+        })
+
+    } catch (error) {
+      console.log(error);  
+    }
+})
+
+router.route('/backoffice/get/registerDetail/:id')
+.get(auth, async (req, res, next) => { 
+
+    try {
+      
+        const sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, district_id, subdistrict_id, postcode FROM employee_register WHERE id = " + `'${req.params.id} ' ORDER BY id DESC `
+
+        db.query(sql, async function(err, results, fields){
+            if (err) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            const result = {
+                "status": 200,
+                "data"  : results, 
+            }
+            return res.json(result)
+        })
+
+    } catch (error) {
+      console.log(error);  
+    }
+})
+
 
 
 
@@ -266,31 +320,46 @@ router.route('/backoffice/login')
         const sql = await 'SELECT * FROM admin WHERE username = ?';
         db.query(sql, username, async function (err, result, fields){
             let user = await null
+            // if(result){
+            //     user = await result[0]
+            // }else{
+            //     res.status(400).send("error : no user in the system");
+            // }
             if(result){
+                
                 user = await result[0]
-            }else{
-                res.status(400).send("error : no user in the system");
-            }
-            if(user){
                 const username_ad = await 'ad\\'+ user.username
                 client.bind(username_ad, password, async err =>  {
-                    let updateData = {}
+                    let updateData = await {}
                     let  newToken = await generateToken({ userId: user.id });
-                    if(err){
-                        if(await bcrypt.compare(password, user.password)){
-                            updateData = await {
-                                "token"     : newToken,
-                                "password"  : hashedPassword,
-                            }
-                        }else{
-                            res.status(400).send("error : password error");
-                        }
-                    }else{
-                        updateData = await {
-                            "token"     : newToken,
-                            "password_ad"  : hashedPassword,
-                        }
+
+                    if (err) return res.status(400).json({
+                        "status": 400,
+                        "message": "password error" // error.sqlMessage
+                    })
+            
+
+                    updateData = await {
+                        "token"     : newToken,
+                        "password_ad"  : hashedPassword,
                     }
+
+
+                    // if(err){
+                    //     if(await bcrypt.compare(password, user.password)){
+                    //         updateData = await {
+                    //             "token"     : newToken,
+                    //             "password"  : hashedPassword,
+                    //         }
+                    //     }else{
+                    //         res.status(400).send("error : password error");
+                    //     }
+                    // }else{
+                    //     updateData = await {
+                    //         "token"     : newToken,
+                    //         "password_ad"  : hashedPassword,
+                    //     }
+                    // }
                     const sql = await 'UPDATE admin SET ? WHERE username = ?'; 
                 
                     db.query(sql, [updateData, username], function (err, result2, fields) {
@@ -301,6 +370,8 @@ router.route('/backoffice/login')
 
                 })
 
+            }else{
+                res.status(400).send("error : no user in the system");
             }
 
         });

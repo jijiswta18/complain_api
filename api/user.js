@@ -552,7 +552,7 @@ router.route('/user/register')
             
                 // Send the password reset email
                 const mailOptions = await {
-                    from: "noreply@cgd.go.th",
+                    from: "irac_noreply@cgd.go.th",
                     to: req.body.email,
                     subject: "ลงทะเบียนสำเร็จ",
                     password: `${password}`,

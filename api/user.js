@@ -324,12 +324,13 @@ router.route('/user/forgot-password')
                       };
                       var smtpTransport = nodemailer.createTransport(smtp);
                       
+    
                     // Send the password reset email
                     const mailOptions = await {
                         from: "democom3@cgd.go.th",
                         to: email,
                         subject: "Password Reset Request",
-                        text: `Please follow this link to reset your password: http://localhost:8080/user/reset-password?token=${forgot_token}`
+                        text: `Please follow this link to reset your password: ${req.protocol}://${req.hostname}/user/reset-password?token=${forgot_token}`
                     };
 
 

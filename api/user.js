@@ -1,12 +1,12 @@
 const express       = require('express');
-const cors          = require('cors');
+// const cors          = require('cors');
 const moment        = require('moment');
 const multer        = require('multer');
 const auth          = require('../middleware/auth')
 const router        = express.Router();
 const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 const bcrypt        = require('bcrypt');
-const fetch         = require('node-fetch');
+// const fetch         = require('node-fetch');
 
 const jwt           = require('jsonwebtoken');
 const nodemailer    = require("nodemailer");
@@ -21,11 +21,11 @@ router.use(bodyParser.urlencoded({ extended: false }));
 
 // router.use(express.static('public'));
 
-router.use(cors({
-    //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
-origin: '*'
+// router.use(cors({
+//     "Access-Control-Allow-Origin": "origin",
+// // origin: '*'
 
-}));
+// }));
 
 
 const message = "Hello, World!";
@@ -46,11 +46,14 @@ moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 function generateToken(payload) {
+
     const token = jwt.sign(
         { username : payload.userId },
         process.env.JWT_KEY,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
+        { algorithm: 'HS256', typ: 'JWT' }
     )
+
     return token;
 }
 

@@ -1,13 +1,17 @@
 
 const express       = require('express')
-const cors          = require('cors')
+// const cors          = require('cors')
 const router        = express.Router()
 const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
-router.use(cors({
-    //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
-origin: '*'
 
-}));
+// router.use(cors({
+//     "Access-Control-Allow-Origin": "origin",
+// // origin: '*'
+
+// }));
+
+
+
 
 router.route('/get/province')
 .get(async (req, res, next) => {

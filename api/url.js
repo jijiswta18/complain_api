@@ -1,7 +1,7 @@
 
 const express       = require('express')
 const auth          = require('../middleware/auth')
-const cors          = require('cors')
+// const cors          = require('cors')
 const moment        = require('moment')
 const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
 const router        = express.Router()
@@ -13,10 +13,10 @@ const fs            = require('fs');
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 
-router.use(cors({
-    //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
-origin: '*'
-}))
+// router.use(cors({
+//     "Access-Control-Allow-Origin": "origin",
+// // origin: '*'
+// }))
 
 
 moment.locale('th');

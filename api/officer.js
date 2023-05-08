@@ -1,5 +1,5 @@
 const express       = require('express')
-const cors          = require('cors')
+// const cors          = require('cors')
 const moment        = require('moment')
 const multer        = require('multer')
 const router        = express.Router()
@@ -13,11 +13,11 @@ const auth          = require('../middleware/auth')
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 
-router.use(cors({
-    //"Access-Control-Allow-Origin": "https://forqueen.cgd.go.th",
-origin: '*'
+// router.use(cors({
+//     "Access-Control-Allow-Origin": "origin",
+// // origin: '*'
 
-}));
+// }));
 
 // Create LDAP client connection 
 const adConfiguration = {

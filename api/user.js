@@ -34,13 +34,11 @@ const secretKey = "secret key";
 // Encrypt the message using AES
 const ciphertext = CryptoJS.AES.encrypt(message, secretKey).toString();
 
-console.log("Ciphertext:", ciphertext); // Output: "Ciphertext: U2FsdGVkX18NU9H6UJ1rhE0+/OyS6oL/vz/W3IfU6e4="
 
 // Decrypt the message using AES
 const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
 const decryptedMessage = bytes.toString(CryptoJS.enc.Utf8);
 
-console.log("Decrypted message:", decryptedMessage); // Output: "Decrypted message: Hello, World!"
 
 moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -98,7 +96,6 @@ var storage = multer.diskStorage({
         fileSize: 100000
     },
     onFileSizeLimit: function (file) {
-        console.log('Failed: ' + file.originalname + ' is limited')
         fs.unlink(file.path)
     }
 });
@@ -178,12 +175,9 @@ router.route('/user/get/complainStep/:id')
     try {
 
         const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
-        // const sql = await "SELECT employee_complain_step.*, admin.name, admin.lastname  FROM employee_complain_step JOIN admin ON employee_complain_step.admin_id = admin.id WHERE employee_complain_step.complain_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){
 
-            console.log(sql);
-            
             if (err) res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
@@ -223,10 +217,7 @@ router.route('/user/login')
                
                 if(user && (await bcrypt.compare(password, user.password))){
 
-                  
 
-                    console.log(await bcrypt.compare(password, user.password));
-        
                     // Generate token
                     const newToken = await generateToken({ userId: user.id });
         
@@ -404,7 +395,7 @@ router.route('/user/forgot/reset-password')
           let check_expire = null
           // Check if the token has expired
           if (decoded.exp < Date.now() / 1000) {
-            console.log(decoded.exp);
+
             check_expire = false
             return res.status(401).send({ auth: false, message: 'Token has expired.' });
 
@@ -430,7 +421,6 @@ router.route('/user/forgot/reset-password')
 
                     db.query(sql_update, [update_password, id], async function(err2, result2, fields){
 
-                        console.log(err2);
                       
                         if (err2) res.status(500).json({
                             "status": 500,
@@ -491,8 +481,6 @@ router.route('/user/reset-password')
 
 router.route('/user/register')
 .post(async (req, res, next) => {
-
-    console.log(`${req.protocol}://${req.hostname}`);
 
     `${req.protocol}://${req.hostname}`
     try {
@@ -808,7 +796,6 @@ router.route('/user/edit/profile')
 .post(async (req, res, next) => {
     try {
 
-        console.log(req.body);
 
         let item = await {
             "email"             :   req.body.email,

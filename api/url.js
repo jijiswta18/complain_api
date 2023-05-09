@@ -27,8 +27,6 @@ router.route('/get/pdf/UrlFilesComplain')
 
     try {
 
-       console.log(req.query);
-
         var data =fs.readFileSync("public/uploads/user/"+req.query.filename);
         res.contentType("application/pdf");
         res.send(data);
@@ -131,16 +129,10 @@ router.route('/update/deleteCorruptFiles')
             "modified_by"   : req.body.admin_id,
             "modified_date" : date
         }
-
-        console.log(item);
-
         let sql = "UPDATE employee_corrupt_files SET ? WHERE id = " + req.body.id
 
         db.query(sql, item, (error,results,fields)=>{
 
-            console.log(sql);
-    
-            console.log(results);
             if (error) return res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage

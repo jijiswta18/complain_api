@@ -43,7 +43,7 @@ var storage_step = multer.diskStorage({
        cb(null, newFileName);
     },
     limits: {
-        fileSize: 100000
+        fileSize:  2 * 1024 * 1024
     },
     onFileSizeLimit: function (file) {
         fs.unlink(file.path)
@@ -63,7 +63,7 @@ var storage_corrupt = multer.diskStorage({
        cb(null, newFileName);
     },
     limits: {
-        fileSize: 100000
+        fileSize: 2 * 1024 * 1024
     },
     onFileSizeLimit: function (file) {
         fs.unlink(file.path)

@@ -93,15 +93,16 @@ var storage = multer.diskStorage({
        cb(null, newFileName);
     },
     limits: {
-        fileSize: 100000
+
+        fileSize:  2 * 1024 * 1024
     },
     onFileSizeLimit: function (file) {
+        console.log('Failed: ' + file.originalname + ' is limited')
         fs.unlink(file.path)
     }
 });
 
 var upload = multer({ storage: storage });
-
 
 router.route('/user/get/complainDetail/:id')
 .get(auth, async (req, res, next) => {
@@ -324,7 +325,7 @@ router.route('/user/forgot-password')
                         from: "democom3@cgd.go.th",
                         to: email,
                         subject: "Password Reset Request",
-                        text: `Please follow this link to reset your password: ${req.protocol}://${req.hostname}/user/reset-password?token=${forgot_token}`
+                        text: `Please follow this link to reset your password: ${req.protocol}//${req.hostname}/user/reset-password?token=${forgot_token}`
                     };
 
 
@@ -839,7 +840,7 @@ router.route('/user/edit/profile')
 })
 
 router.route('/user/uploadFiles')
-.post(upload.single('images'), async (req, res, next) => {
+.post(upload.single('images'),  (req, res, next) => {
 
     res.send(req.files);
 })

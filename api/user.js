@@ -147,7 +147,7 @@ router.route('/user/get/listFollow/:id')
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id}'`
+        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id} ' ORDER BY id DESC`
 
         db.query(sql, async function(err, result, fields){
             

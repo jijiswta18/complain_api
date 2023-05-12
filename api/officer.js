@@ -46,6 +46,7 @@ var storage_step = multer.diskStorage({
         fileSize:  2 * 1024 * 1024
     },
     onFileSizeLimit: function (file) {
+        console.log('Failed: ' + file.originalname + ' is limited')
         fs.unlink(file.path)
     }
 });
@@ -88,7 +89,7 @@ return token;
 router.route('/backoffice/get/listComplain')
 .get(auth, async (req, res, next) => {
     try {
-        const sql = await "SELECT * FROM employee_complain WHERE status_call = 0"
+        const sql = await "SELECT * FROM employee_complain WHERE status_call = 0 ORDER BY id DESC"
         db.query(sql, async function(err, result, fields){ 
             if (err) res.status(500).json({
                 "status": 500,
@@ -134,9 +135,9 @@ router.route('/backoffice/get/listFollow')
         let roles = req.query.roles
         let sql = ''
         if(roles == 'general'){
-             sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0`
+             sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0 ORDER BY id DESC`
         } else if(roles == 'admin'){
-             sql = await "SELECT * FROM employee_complain WHERE status_call != 0"
+             sql = await "SELECT * FROM employee_complain WHERE status_call != 0 ORDER BY id DESC"
         }
         db.query(sql, async function(err, result, fields){
             if (err) res.status(500).json({
@@ -222,7 +223,7 @@ router.route('/backoffice/get/CorruptFiles/:id')
 router.route('/backoffice/get/listUser')
 .get(auth, (req, res, next) => { 
     // แสดงข้อมูลทั้งหมด
-    const sql = 'SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin ';
+    const sql = 'SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin ORDER BY id DESC';
     db.query(sql, async function (err, results, fields) {
         if (err) return res.status(500).json({
             "status": 500,
@@ -264,7 +265,7 @@ router.route('/backoffice/get/listRegister')
         // if(id != undefined){
         //     sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, district_id, subdistrict_id, postcode FROM employee_register WHERE id = " + `'${id}'`;
         // }else{
-            const sql = 'SELECT id, email, name, lastname, phone, create_date FROM employee_register ';
+            const sql = 'SELECT id, email, name, lastname, phone, create_date FROM employee_register ORDER BY id DESC';
         // }
 
         db.query(sql, async function(err, results, fields){
@@ -320,6 +321,7 @@ router.route('/backoffice/login')
         const sql = await 'SELECT * FROM admin WHERE username = ?';
         db.query(sql, username, async function (err, result, fields){
             let user = await null
+            console.log(user);
             // if(result){
             //     user = await result[0]
             // }else{
@@ -383,7 +385,7 @@ router.route('/backoffice/login')
 
 router.route('/backoffice/uploadStepFiles')
 .post(upload_step.single('images'), async (req, res, next) => {
-
+    
     res.send(req.files);
 })
     

@@ -1,17 +1,12 @@
 const jwt = require('jsonwebtoken');
 
-const config = process.env;
+
 
 const verifyToken = (req, res, next) => {
 
     // const token = req.body.token || req.query.token || req.headers['authorization'];
     const authorization = req.headers['authorization'] 
 
-
-    // console.log(authorization);
-
-
-   
     if(authorization===undefined) return res.status(401).json({
         "status": 401,
         "message": "Unauthorized"
@@ -24,8 +19,11 @@ const verifyToken = (req, res, next) => {
         "message": "Unauthorized"
     })  
 
+    const secretKey = process.env.JWT_KEY; // Use environment variable
+
     try {
-        const decoded = jwt.verify(token, config.JWT_KEY);
+  
+        const decoded = jwt.verify(token, secretKey);
         
         req.user = decoded;
 

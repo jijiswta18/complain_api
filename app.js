@@ -10,10 +10,14 @@ app.use(bodyParser.json());
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', 'origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
+    // res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    
     next();
   });
+
+
 // app.use(cors({origin: '*'}));
 
 // ใช้งาน router module
@@ -39,6 +43,6 @@ app.use(express.static('public'));
 //     res.send('Hello World!');
 // });
 
-app.listen(3000, () =>{
-    console.log('Server is listening on port 3000...')
+app.listen(5000, () =>{
+    console.log('Server is listening on port 5000...')
 });

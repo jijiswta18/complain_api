@@ -75,15 +75,34 @@ var upload_corrupt = multer({ storage: storage_corrupt });
 
 
 
-function generateToken(payload) {
-const token = jwt.sign(
-    { username : payload.userId },
-    process.env.JWT_KEY,
-    { expiresIn: "1h" }
-)
-return token;
-}
+// function generateToken(payload) {
+// const token = jwt.sign(
+//     { username : payload.userId },
+//     process.env.JWT_KEY,
+//     { expiresIn: "1h" }
+// )
+// return token;
+// }
   
+function generateToken(id) {
+
+    const payload = {
+        jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
+        "username": id.userId,
+        "role": "admin",
+        "expiresIn": "1h"
+            
+    }
+
+    const secretKey = process.env.JWT_KEY; // Use environment variable
+ 
+    const options = {expiresIn: '1h'};
+ 
+    const token = jwt.sign(payload, secretKey, options);
+
+    return token;
+
+}
 
 
 router.route('/backoffice/get/listComplain')

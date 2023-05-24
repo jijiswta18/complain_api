@@ -43,17 +43,38 @@ const decryptedMessage = bytes.toString(CryptoJS.enc.Utf8);
 moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-function generateToken(payload) {
+// function generateToken(payload) {
 
-    const token = jwt.sign(
-        { username : payload.userId },
-        process.env.JWT_KEY,
-        { expiresIn: "1h" },
-        { algorithm: 'HS256', typ: 'JWT' }
-    )
+//     const token = jwt.sign(
+//         { username : payload.userId },
+//         process.env.JWT_KEY,
+//         { expiresIn: "1h" },
+//         { algorithm: 'HS256', typ: 'JWT' }
+//     )
+
+//     return token;
+// }
+
+function generateToken(id) {
+
+    const payload = {
+        jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
+        "username": id.userId,
+        "role": "user",
+        "expiresIn": "1h"
+            
+    }
+
+    const secretKey = process.env.JWT_KEY; // Use environment variable
+ 
+    const options = {expiresIn: '1h'};
+ 
+    const token = jwt.sign(payload, secretKey, options);
 
     return token;
+
 }
+
 
 
 function generateStrongPassword(length) {

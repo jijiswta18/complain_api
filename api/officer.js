@@ -1,23 +1,18 @@
 const express       = require('express')
-// const cors          = require('cors')
 const moment        = require('moment')
 const multer        = require('multer')
+const auth          = require('../middleware/auth')
 const router        = express.Router()
 const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
 const bcrypt        = require('bcrypt')
 const jwt           = require('jsonwebtoken')
 const ldap          = require('ldapjs')
 const bodyParser    = require('body-parser')
-const auth          = require('../middleware/auth')
+const fs            = require('fs');
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 
-// router.use(cors({
-//     "Access-Control-Allow-Origin": "origin",
-// // origin: '*'
-
-// }));
 
 // Create LDAP client connection 
 const adConfiguration = {
@@ -32,61 +27,11 @@ const adConfiguration = {
 moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-// uoload file_complain_step
-var storage_step = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/uploads/complain_step');
-    },
-
-    filename: function (req, file, cb) {
-        let newFileName         =   req.body.image_name
-       cb(null, newFileName);
-    },
-    limits: {
-        fileSize:  2 * 1024 * 1024
-    },
-    onFileSizeLimit: function (file) {
-        console.log('Failed: ' + file.originalname + ' is limited')
-        fs.unlink(file.path)
-    }
-});
-
-var upload_step = multer({ storage: storage_step });
-
-// uoload file_corrupt
-var storage_corrupt = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/uploads/corrupt');
-    },
-
-    filename: function (req, file, cb) {
-        let newFileName         =   req.body.image_name
-       cb(null, newFileName);
-    },
-    limits: {
-        fileSize: 2 * 1024 * 1024
-    },
-    onFileSizeLimit: function (file) {
-        fs.unlink(file.path)
-    }
-});
-
-var upload_corrupt = multer({ storage: storage_corrupt });
 
 
+async function generateToken(id) {
 
-// function generateToken(payload) {
-// const token = jwt.sign(
-//     { username : payload.userId },
-//     process.env.JWT_KEY,
-//     { expiresIn: "1h" }
-// )
-// return token;
-// }
-  
-function generateToken(id) {
-
-    const payload = {
+    const payload = await {
         jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
         "username": id.userId,
         "role": "admin",
@@ -94,11 +39,8 @@ function generateToken(id) {
             
     }
 
-    const secretKey = process.env.JWT_KEY; // Use environment variable
- 
-    const options = {expiresIn: '1h'};
- 
-    const token = jwt.sign(payload, secretKey, options);
+    const privateKey = await fs.readFileSync('jwtRS256.key');
+    const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256'});
 
     return token;
 
@@ -154,11 +96,19 @@ router.route('/backoffice/get/listFollow')
         let roles = req.query.roles
         let sql = ''
         if(roles == 'general'){
-             sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0 ORDER BY id DESC`
+            // const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail'  
+            // 'FROM employee_complain_step a '
+            // 'LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'` + "ORDER BY a.id"
+            
+            sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.admin_id = " + `'${id}' AND a.status_call != 0 ORDER BY id DESC`
+            // sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0 ORDER BY id DESC`
         } else if(roles == 'admin'){
-             sql = await "SELECT * FROM employee_complain WHERE status_call != 0 ORDER BY id DESC"
+             sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.status_call != 0 ORDER BY a.id DESC"
+            //  sql = await "SELECT * FROM employee_complain WHERE status_call != 0 ORDER BY id DESC"
         }
         db.query(sql, async function(err, result, fields){
+
+          
             if (err) res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
@@ -308,9 +258,7 @@ router.route('/backoffice/get/registerDetail/:id')
 .get(auth, async (req, res, next) => { 
 
     try {
-      
-        const sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, district_id, subdistrict_id, postcode FROM employee_register WHERE id = " + `'${req.params.id} ' ORDER BY id DESC `
-
+        const sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, province_name, district_id, district_name, subdistrict_id, subdistrict_name, postcode  FROM employee_register WHERE id = " + `'${req.params.id} ' ORDER BY id DESC `
         db.query(sql, async function(err, results, fields){
             if (err) return res.status(500).json({
                 "status": 500,
@@ -322,7 +270,6 @@ router.route('/backoffice/get/registerDetail/:id')
             }
             return res.json(result)
         })
-
     } catch (error) {
       console.log(error);  
     }
@@ -340,14 +287,7 @@ router.route('/backoffice/login')
         const sql = await 'SELECT * FROM admin WHERE username = ?';
         db.query(sql, username, async function (err, result, fields){
             let user = await null
-            console.log(user);
-            // if(result){
-            //     user = await result[0]
-            // }else{
-            //     res.status(400).send("error : no user in the system");
-            // }
             if(result){
-                
                 user = await result[0]
                 const username_ad = await 'ad\\'+ user.username
                 client.bind(username_ad, password, async err =>  {
@@ -358,33 +298,39 @@ router.route('/backoffice/login')
                         "status": 400,
                         "message": "password error" // error.sqlMessage
                     })
-            
-
                     updateData = await {
                         "token"     : newToken,
                         "password_ad"  : hashedPassword,
                     }
 
-
-                    // if(err){
-                    //     if(await bcrypt.compare(password, user.password)){
-                    //         updateData = await {
-                    //             "token"     : newToken,
-                    //             "password"  : hashedPassword,
-                    //         }
-                    //     }else{
-                    //         res.status(400).send("error : password error");
-                    //     }
-                    // }else{
-                    //     updateData = await {
-                    //         "token"     : newToken,
-                    //         "password_ad"  : hashedPassword,
-                    //     }
-                    // }
+                    console.log(updateData);
                     const sql = await 'UPDATE admin SET ? WHERE username = ?'; 
                 
-                    db.query(sql, [updateData, username], function (err, result2, fields) {
-        
+                    db.query(sql, [updateData, username], async function (err, result2, fields) {
+
+                        console.log(result2);
+                        
+                        let dataToken = await {
+                            "token"         :   newToken,
+                            "expire"        :   date,
+                            "revoke"        :   '0',
+                            "user_id"       :   user.id,
+                            "roles"         :   'officer'
+                        }
+
+                        let sql_token = await 'INSERT INTO token SET ?'
+
+                        db.query(sql_token, dataToken, async function (error,results_token,fields){
+            
+                            if (error) return res.status(500).json({
+                                "status": 500,
+                                "message": "Internal Server Error" // error.sqlMessage
+                            })
+                
+                            dataToken = await [{'id' : results_token.insertId,...dataToken}]
+                                
+                        })
+
                         return res.json({userdata: user, token:newToken})
                         
                     });
@@ -402,19 +348,6 @@ router.route('/backoffice/login')
     }
 })
 
-router.route('/backoffice/uploadStepFiles')
-.post(upload_step.single('images'), async (req, res, next) => {
-    
-    res.send(req.files);
-})
-    
-router.route('/backoffice/uploadCorruptFiles')
-.post(upload_corrupt.single('images'), async (req, res, next) => {
-
-    res.send(req.files);
-})
-    
-
 router.route('/backoffice/create/user')
 .post(async (req, res, next) => {
 
@@ -423,7 +356,7 @@ router.route('/backoffice/create/user')
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
         let user = {
             "username"      : req.body.username,
-            "password"      : hashedPassword,
+            "password_ad"   : hashedPassword,
             "name"          : req.body.name,
             "lastname"      : req.body.lastname,
             "position"      : req.body.position,
@@ -431,9 +364,9 @@ router.route('/backoffice/create/user')
             "roles"         : req.body.roles,
             "status"        : req.body.status,
             "state"         : 1,
-            "create_by"     : req.body.userId,
+            "create_by"     : req.body.admin_id,
             "create_date"   : date,
-            "modified_by"   : req.body.userId,
+            "modified_by"   : req.body.admin_id,
             "modified_date" : date
         }
 
@@ -664,7 +597,9 @@ router.route('/backoffice/create/complainCorrupt')
 
     try {
 
-        let item = {
+
+
+        let item = await{
             "complain_step_id"  : req.body.complain_step_id,
             "reference_code"    : req.body.reference_code,
             "date"              : req.body.date,
@@ -675,19 +610,20 @@ router.route('/backoffice/create/complainCorrupt')
             "modified_date"     : date
         }
     
-        let sql = "INSERT INTO employee_complain_corrupt SET ? "
-
+        let sql = await "INSERT INTO employee_complain_corrupt SET ? "
 
         db.query(sql,item, async function (error,results,fields){
 
-            if (error) return res.status(500).json({
+           console.log(error);
+
+           if (error) return res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
             })
 
-            item = [{'id':results.insertId, ...item}]
+            item = await [{'id':results.insertId, ...item}]
 
-            const result = {
+           const result =  await {
                 "status": 200,
                 "corrupt_id": results.insertId,
             }
@@ -706,7 +642,7 @@ router.route('/backoffice/edit/complainCorrupt')
     try {
 
         let item = {
-            // "complain_step_id"  : req.body.complain_step_id,
+            "complain_step_id"  : req.body.complain_step_id,
             "reference_code"    : req.body.reference_code,
             "date"              : req.body.date,
             "detail"            : req.body.detail,
@@ -718,6 +654,8 @@ router.route('/backoffice/edit/complainCorrupt')
 
 
         db.query(sql,[item, req.body.corrupt_id], async function (error,results,fields){
+
+            console.log(error);
 
 
             if (error) return res.status(500).json({

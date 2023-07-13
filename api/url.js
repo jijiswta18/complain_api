@@ -27,7 +27,7 @@ router.route('/get/pdf/UrlFilesComplain')
 
     try {
 
-        var data =fs.readFileSync("public/uploads/user/"+req.query.filename);
+        var data =fs.readFileSync("public/uploads/complain/"+req.query.filename);
         res.contentType("application/pdf");
         res.send(data);
         // const url               = await "public/uploads/user/"+req.query.filename;
@@ -46,7 +46,7 @@ router.route('/get/UrlFilesComplain')
 .get(auth, async (req,res, next)=> { 
     try {
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
-        const url               = await fullUrl+"/uploads/user/"+req.query.filename;
+        const url               = await fullUrl+"/uploads/complain/"+req.query.filename;
         const imageUrlData      = await fetch(url);
         const buffer            = await imageUrlData.arrayBuffer();
         const stringifiedBuffer = await Buffer.from(buffer).toString('base64');
@@ -66,7 +66,8 @@ router.route('/get/UrlFilesComplain')
 router.route('/get/pdf/UrlFilesComplainStep')
 .get(auth, async (req,res, next)=> { 
     try {
-        var data = fs.readFileSync("public/uploads/complain_step/"+req.query.filename);
+        var data = fs.readFileSync("public/uploads/complain_step/" +req.query.filename);
+        // var data = fs.readFileSync("public/uploads/complain_step/"+req.query.filename);
         res.contentType("application/pdf");
         res.send(data);
     } catch (error) {

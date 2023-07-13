@@ -1,32 +1,18 @@
 const express       = require('express');
-// const cors          = require('cors');
 const moment        = require('moment');
-const multer        = require('multer');
 const auth          = require('../middleware/auth')
 const router        = express.Router();
 const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 const bcrypt        = require('bcrypt');
-// const fetch         = require('node-fetch');
-
 const jwt           = require('jsonwebtoken');
 const nodemailer    = require("nodemailer");
 const bodyParser    = require('body-parser');
-
 const CryptoJS      = require("crypto-js");
-const Buffer        = require('buffer/').Buffer
 const fs            = require('fs');
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
-
-// router.use(express.static('public'));
-
-// router.use(cors({
-//     "Access-Control-Allow-Origin": "origin",
-// // origin: '*'
-
-// }));
-
+require("dotenv").config();
 
 const message = "Hello, World!";
 const secretKey = "secret key";
@@ -34,47 +20,29 @@ const secretKey = "secret key";
 // Encrypt the message using AES
 const ciphertext = CryptoJS.AES.encrypt(message, secretKey).toString();
 
-
 // Decrypt the message using AES
 const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
-const decryptedMessage = bytes.toString(CryptoJS.enc.Utf8);
-
 
 moment.locale('th');
+
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-// function generateToken(payload) {
 
-//     const token = jwt.sign(
-//         { username : payload.userId },
-//         process.env.JWT_KEY,
-//         { expiresIn: "1h" },
-//         { algorithm: 'HS256', typ: 'JWT' }
-//     )
 
-//     return token;
-// }
+async function generateToken(id, audience) {
 
-function generateToken(id) {
-
-    const payload = {
+    const payload = await {
         jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
         "username": id.userId,
+        "aud": audience,
         "role": "user",
-        "expiresIn": "1h"
-            
+        "expiresIn": "1h"     
     }
-
-    const secretKey = process.env.JWT_KEY; // Use environment variable
- 
-    const options = {expiresIn: '1h'};
- 
-    const token = jwt.sign(payload, secretKey, options);
-
+    const privateKey = await fs.readFileSync('jwtRS256.key');
+    const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256'});
     return token;
 
 }
-
 
 
 function generateStrongPassword(length) {
@@ -102,28 +70,6 @@ function generateStrongPassword(length) {
     // join the password array into a string and return it
     return password.join('');
 }
-
-// uoload image
-var storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/uploads/user');
-    },
-
-    filename: function (req, file, cb) {
-        let newFileName         =   req.body.image_name
-       cb(null, newFileName);
-    },
-    limits: {
-
-        fileSize:  2 * 1024 * 1024
-    },
-    onFileSizeLimit: function (file) {
-        console.log('Failed: ' + file.originalname + ' is limited')
-        fs.unlink(file.path)
-    }
-});
-
-var upload = multer({ storage: storage });
 
 router.route('/user/get/complainDetail/:id')
 .get(auth, async (req, res, next) => {
@@ -184,7 +130,7 @@ router.route('/user/get/listFollow/:id')
         })
 
     } catch (error) {
-        console.log(error);     
+        console.log('listFollow',error);     
     }
 
 })
@@ -221,6 +167,89 @@ router.route('/user/get/complainStep/:id')
 router.route('/user/login')
 .post(async (req, res, next) => {
     try {
+        const email     = await req.body.email
+        const password  = await req.body.password
+        const sql       = await 'SELECT * FROM employee_register WHERE email = ?';
+        db.query(sql, email, async function (err, result, fields){
+            let user    = await null
+            if(result){
+                user    = await result[0]
+                if(user && (await bcrypt.compare(password, user.password))){
+                    const audience = 'your-audience';
+                    // Generate token
+                    const newToken = await generateToken({ userId: user.id }, audience);
+
+                    let updateData = await {
+                    "token"       : newToken,
+                    "login_date"  : date,
+                    }
+                    const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?'; 
+                    db.query(sql_update, [updateData, user.id], async function (err, result2, fields) {
+
+                        let dataToken = await {
+                            "token"         :   newToken,
+                            "expire"        :   date,
+                            "revoke"        :   '0',
+                            "user_id"       :   user.id,
+                            "roles"         :   'user'
+                        }
+
+                        let sql_token = await 'INSERT INTO token SET ?'
+
+                        db.query(sql_token, dataToken, async function (error,results_token,fields){
+            
+                            if (error) return res.status(500).json({
+                                "status": 500,
+                                "message": "Internal Server Error" // error.sqlMessage
+                            })
+                
+                            dataToken = await [{'id' : results_token.insertId,...dataToken}]
+                                
+                        })
+
+                        let data = await {
+                            "id"                : user.id,
+                            // "token"             : user.token,
+                            "email"             : user.email,
+                            "name"              : user.name,
+                            "lastname"          : user.lastname,
+                            "gender"            : user.gender,
+                            "age"               : user.age,
+                            "phone"             : user.phone,
+                            "phone_other"       : user.phone_other,
+                            "address"           : user.address,
+                            "province_id"       : user.province_id,
+                            "district_id"       : user.district_id,
+                            "subdistrict_id"    : user.subdistrict_id,
+                            "postcode"          : user.postcode,
+                            "roles"             : user.roles,
+                        }
+
+                        return res.json({userdata: data, token: newToken})
+
+                      
+                    });
+                  
+            
+                }else{
+                    res.status(400).send("error : password error");
+                }
+    
+            }else{
+                res.status(400).send("error : no user in the system");
+            }
+    
+        });
+    
+    } catch (error) {
+        console.log(error)
+    }
+})
+
+
+router.route('/user/checkLogin')
+.post(async (req, res, next) => {
+    try {
         const email = await req.body.email
         const password = await req.body.password
 
@@ -239,42 +268,11 @@ router.route('/user/login')
                
                 if(user && (await bcrypt.compare(password, user.password))){
 
-
-                    // Generate token
-                    const newToken = await generateToken({ userId: user.id });
-        
-                    let updateData = await {
-                    "token"       : newToken,
-                    "login_date"  : date,
-                    }
-
-                    let data = await {
-                        "id"                : user.id,
-                        "token"             : user.token,
-                        "email"             : user.email,
-                        "name"              : user.name,
-                        "lastname"          : user.lastname,
-                        "gender"            : user.gender,
-                        "age"               : user.age,
-                        "phone"             : user.phone,
-                        "phone_other"       : user.phone_other,
-                        "address"           : user.address,
-                        "province_id"       : user.province_id,
-                        "district_id"       : user.district_id,
-                        "subdistrict_id"    : user.subdistrict_id,
-                        "postcode"          : user.postcode,
-                        "roles"             : user.roles,
-                    }
-            
-
-            
-                    const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?'; 
-            
-                    db.query(sql_update, [updateData, user.id], function (err, result2, fields) {
-
-
-                    return res.json({userdata: data, token: newToken})
-            
+                    res.status(200).json({
+                        message : "User success",
+                        check_user : true,
+                        id : user.id,
+                        first_reset_password : user.first_reset_password
                     });
             
                 }else{
@@ -292,10 +290,41 @@ router.route('/user/login')
     }
 })
 
+router.route('/user/resetePasswordLogin')
+.post(async (req, res, next) => {
+    try {
+
+        const email = await req.body.email
+
+        const password = await req.body.password
+
+        const hashedPassword = await bcrypt.hash(password, 12)
+
+        let updateData = await {
+            "password"              : hashedPassword,
+            // "first_reset_password"  : true
+        }
+        const sql_update = await 'UPDATE employee_register SET ? WHERE email = ?'
+
+        db.query(sql_update, [updateData, email], async function (err, result, fields){
+
+            res.status(200).json({
+                message: "reset password to success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+
 router.route('/user/forgot-password')
 .post(async (req, res, next) => {
 
     const { email } = req.body;
+
+    console.log(email);
 
     try {
 
@@ -311,7 +340,29 @@ router.route('/user/forgot-password')
 
                 user = await result[0]
 
-                const forgot_token = await generateToken({ userId: user.id });
+                // const forgot_token = await generateToken({ userId: user.id });
+
+                const currentTimestamp = Math.floor(Date.now() / 1000);
+
+                const expiresIn = 3600; // Expires in 1 hour (adjust as needed)
+        
+                const newExpiration = currentTimestamp + expiresIn;
+        
+                const momentObj = moment.unix(newExpiration);
+        
+                const formattedDateTime = momentObj.format('YYYY-MM-DD HH:mm:ss');
+
+                const payload = await {
+                    jti             : 'unique-nonce-value', // Add a unique nonce value to the jti claim
+                    "username"      : user.id,
+                    "role"          : "user",
+                    "expiresIn"     : "1h",
+                    "createToken"  : date,  
+                    "expiresToken"  : formattedDateTime     
+                }
+                const privateKey = await fs.readFileSync('jwtRS256.key');
+
+                const forgot_token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256'});
 
                 // const hashedToken = await bcrypt.hash(forgot_token, 10)
 
@@ -328,38 +379,38 @@ router.route('/user/forgot-password')
             
                     });
 
-                    var smtp = {
-                        host: 'mx.cgd.go.th', //set to your host name or ip
-                        port: 25, //25, 465, 587 depend on your 
-                        secure: false, // use SSL\
+                    // var smtp = {
+                    //     host: 'mx.cgd.go.th', //set to your host name or ip
+                    //     port: 25, //25, 465, 587 depend on your 
+                    //     secure: false, // use SSL\
                         
-                        // auth: {
-                        //   user: 'democom3@cgd.go.th', //user account
-                        //   pass: '' //user password
-                        // }
-                      };
-                      var smtpTransport = nodemailer.createTransport(smtp);
+                    //     // auth: {
+                    //     //   user: 'democom3@cgd.go.th', //user account
+                    //     //   pass: '' //user password
+                    //     // }
+                    //   };
+                    //   var smtpTransport = nodemailer.createTransport(smtp);
                       
     
-                    // Send the password reset email
-                    const mailOptions = await {
-                        from: "democom3@cgd.go.th",
-                        to: email,
-                        subject: "Password Reset Request",
-                        text: `Please follow this link to reset your password: ${req.protocol}//${req.hostname}/user/reset-password?token=${forgot_token}`
-                    };
+                    // // Send the password reset email
+                    // const mailOptions = await {
+                    //     from: "irac_noreply@cgd.go.th",
+                    //     to: email,
+                    //     subject: "Password Reset Request",
+                    //     text: `Please follow this link to reset your password: ${req.protocol}//${req.hostname}/user/reset-password?token=${forgot_token}`
+                    // };
 
 
-                    smtpTransport.sendMail(mailOptions, function(error, response){
-                        smtpTransport.close();
-                        if(error){
-                            console.log(error);
-                           //error handler
-                        }else{
-                           //success handler 
-                           console.log('send email success');
-                        }
-                     });
+                    // smtpTransport.sendMail(mailOptions, function(error, response){
+                    //     smtpTransport.close();
+                    //     if(error){
+                    //         console.log(error);
+                    //        //error handler
+                    //     }else{
+                    //        //success handler 
+                    //        console.log('send email success');
+                    //     }
+                    //  });
                 //    await transporter.sendMail(mailOptions);
 
                 // transporter.sendMail(mailOptions, (error, info) => {
@@ -376,7 +427,38 @@ router.route('/user/forgot-password')
                 //     }
                 // });
 
-                   console.log(mailOptions);
+                var smtp = await {
+                    host: 'mx.cgd.go.th', //set to your host name or ip
+                    port: 25, //25, 465, 587 depend on your 
+                    secure: false, // use SSL\
+                    
+                    // auth: {
+                    //   user: 'democom3@cgd.go.th', //user account
+                    //   pass: '' //user password
+                    // }
+                };
+                var smtpTransport = await nodemailer.createTransport(smtp);
+
+                const mailOptions = await {
+                    from: "irac_noreply@cgd.go.th",
+                    to: email,
+                    subject: "ยืนยันการขอเปลี่ยนรหัสผ่าน เว็บไซต์ : ระบบรับเรื่องร้องเรียนทุจริต",
+                    text: `Please follow this link to reset your password: ${req.protocol}//${req.hostname}/user/reset-password/${forgot_token}`
+                };
+
+
+                await smtpTransport.sendMail(mailOptions, function(error, response){
+                    smtpTransport.close();
+                    if(error){
+                        console.log(error);
+                    //error handler
+                    }else{
+                    //success handler 
+                    console.log('send email success');
+                    }
+                });
+
+
                 // Return a success response to the client
                 res.status(200).json({
                     message: "Password reset email sent! Please check your inbox."
@@ -398,68 +480,174 @@ router.route('/user/forgot-password')
 
 })
 
+// router.route('/user/forgot/reset-password')
+// .post(async (req, res, next) => {
+
+//     const hashedPassword    = await bcrypt.hash(req.body.password, 10)
+
+//     try {
+
+//         const token = req.body.forgot_token;
+    
+//         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+//         var cert = fs.readFileSync('jwtRS256.key.pub');
+        
+//         jwt.verify(token, cert, function(err, decoded) {
+  
+//           if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+ 
+//           let check_expire = null
+//           // Check if the token has expired
+//           if (decoded.exp < Date.now() / 1000) {
+
+//             check_expire = false
+//             return res.status(401).send({ auth: false, message: 'Token has expired.' });
+
+//           }else{
+//             check_expire = true
+//           }
+
+//           if(check_expire){
+//             const sql =  "SELECT id FROM employee_register WHERE forgot_token = " + `'${req.body.forgot_token}'`;
+
+//             db.query(sql, async function (err, result, fields){
+
+//                 if(result){
+
+//                     let id = await result[0].id
+//                     let update_password = await {
+//                         "password"      : hashedPassword,
+//                         "modified_by"   : id,
+//                         "modified_date" : date
+//                     }
+
+//                     let sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+
+//                     db.query(sql_update, [update_password, id], async function(err2, result2, fields){
+
+                      
+//                         if (err2) res.status(500).json({
+//                             "status": 500,
+//                             "message": "Internal Server Error" // error.sqlMessage
+//                         })
+
+//                         res.status(200).json({
+//                             message: "change password complete"
+//                         });
+//                     })
+//                 }
+              
+//             })
+    
+//           }
+      
+//         });
+
+      
+//     } catch (error) {
+//        console.log(error); 
+//     }
+// })
+
 router.route('/user/forgot/reset-password')
 .post(async (req, res, next) => {
 
     const hashedPassword    = await bcrypt.hash(req.body.password, 10)
-    // const hashedToken       = await bcrypt.hash(req.body.forgot_token, 10)
 
     try {
 
         const token = req.body.forgot_token;
+
+        const sql =  "SELECT id FROM employee_register WHERE forgot_token = " + `'${token}'`;
+
+        db.query(sql, async function (err, result, fields){
+
+            console.log(err);
+
+            if(result){
+
+                let id = await result[0].id
+                let update_password = await {
+                    "password"              : hashedPassword,
+                    "first_reset_password"  : true,
+                    "modified_by"           : id,
+                    "modified_date"         : date
+                }
+
+                let sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+
+                db.query(sql_update, [update_password, id], async function(err2, result2, fields){
+
+                  
+                    if (err2) res.status(500).json({
+                        "status": 500,
+                        "message": "Internal Server Error" // error.sqlMessage
+                    })
+
+                    res.status(200).json({
+                        message: "change password complete"
+                    });
+                })
+            }
+          
+        })
+
     
-        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+        // if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        // var cert = fs.readFileSync('jwtRS256.key.pub');
         
-        jwt.verify(token, process.env.JWT_KEY, function(err, decoded) {
+        // jwt.verify(token, cert, function(err, decoded) {
   
-          if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+        //   if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
  
-          let check_expire = null
-          // Check if the token has expired
-          if (decoded.exp < Date.now() / 1000) {
+        //   let check_expire = null
+        //   // Check if the token has expired
+        //   if (decoded.exp < Date.now() / 1000) {
 
-            check_expire = false
-            return res.status(401).send({ auth: false, message: 'Token has expired.' });
+        //     check_expire = false
+        //     return res.status(401).send({ auth: false, message: 'Token has expired.' });
 
-          }else{
-            check_expire = true
-          }
+        //   }else{
+        //     check_expire = true
+        //   }
 
-          if(check_expire){
-            const sql =  "SELECT id FROM employee_register WHERE forgot_token = " + `'${req.body.forgot_token}'`;
+        //   if(check_expire){
+        //     const sql =  "SELECT id FROM employee_register WHERE forgot_token = " + `'${req.body.forgot_token}'`;
 
-            db.query(sql, async function (err, result, fields){
+        //     db.query(sql, async function (err, result, fields){
 
-                if(result){
+        //         if(result){
 
-                    let id = await result[0].id
-                    let update_password = await {
-                        "password"      : hashedPassword,
-                        "modified_by"   : id,
-                        "modified_date" : date
-                    }
+        //             let id = await result[0].id
+        //             let update_password = await {
+        //                 "password"      : hashedPassword,
+        //                 "modified_by"   : id,
+        //                 "modified_date" : date
+        //             }
 
-                    let sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+        //             let sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
 
-                    db.query(sql_update, [update_password, id], async function(err2, result2, fields){
+        //             db.query(sql_update, [update_password, id], async function(err2, result2, fields){
 
                       
-                        if (err2) res.status(500).json({
-                            "status": 500,
-                            "message": "Internal Server Error" // error.sqlMessage
-                        })
+        //                 if (err2) res.status(500).json({
+        //                     "status": 500,
+        //                     "message": "Internal Server Error" // error.sqlMessage
+        //                 })
 
-                        res.status(200).json({
-                            message: "change password complete"
-                        });
-                    })
-                }
+        //                 res.status(200).json({
+        //                     message: "change password complete"
+        //                 });
+        //             })
+        //         }
               
-            })
+        //     })
     
-          }
+        //   }
       
-        });
+        // });
 
       
     } catch (error) {
@@ -512,22 +700,26 @@ router.route('/user/register')
         const hashedPassword = await bcrypt.hash(password, 12)
 
         let item_register = await {
-            "email"             : req.body.email,
-            "password"          : hashedPassword,
-            "name"              : req.body.name,
-            "lastname"          : req.body.lastname,
-            "age"               : req.body.age,
-            "phone"             : req.body.phone,
-            "phone_other"       : req.body.phone_other,
-            "address"           : req.body.address,
-            "province_id"       : req.body.province,
-            "district_id"       : req.body.district,
-            "subdistrict_id"    : req.body.subdistrict,
-            "postcode"          : req.body.postcode,
-            "check_policy"      : req.body.check_policy,
-            "roles"             : 'user',
-            "create_date"       : date,
-            "modified_date"     : date,
+            "email"                 : req.body.email,
+            "password"              : hashedPassword,
+            "first_reset_password"  : false,
+            "name"                  : req.body.name,
+            "lastname"              : req.body.lastname,
+            "age"                   : req.body.age,
+            "phone"                 : req.body.phone,
+            "phone_other"           : req.body.phone_other,
+            "address"               : req.body.address,
+            "province_id"           : req.body.province,
+            "province_name"         : req.body.province_name,
+            "district_id"           : req.body.district,
+            "district_name"         : req.body.district_name,
+            "subdistrict_id"        : req.body.subdistrict,
+            "subdistrict_name"      : req.body.subdistrict_name,
+            "postcode"              : req.body.postcode,
+            "check_policy"          : req.body.check_policy,
+            "roles"                 : 'user',
+            "create_date"           : date,
+            "modified_date"         : date,
         }
         let sql = await "INSERT INTO employee_register SET ?"
     
@@ -661,6 +853,7 @@ router.route('/user/complain')
         let sql = await "INSERT INTO employee_complain SET ? "
     
         db.query(sql,item, async function (error,results,fields){
+
   
             if (error) return res.status(500).json({
                 "status": 500,
@@ -829,8 +1022,11 @@ router.route('/user/edit/profile')
             "phone_other"       :   req.body.phone_other,
             "address"           :   req.body.address,
             "province_id"       :   req.body.province_id,
+            "province_name"     :   req.body.province_name,
             "district_id"       :   req.body.district_id,
+            "district_name"     :   req.body.district_name,
             "subdistrict_id"    :   req.body.subdistrict_id,
+            "subdistrict_name"  :   req.body.subdistrict_name,
             "postcode"          :   req.body.postcode,
             "modified_by"       :   req.body.id,
             "modified_date"     :   date
@@ -860,11 +1056,69 @@ router.route('/user/edit/profile')
     }
 })
 
-router.route('/user/uploadFiles')
-.post(upload.single('images'),  (req, res, next) => {
+router.route('/user/checkTokenReset/:token')
+.get(async (req, res, next) => {
 
-    res.send(req.files);
+    try {
+
+        const { token } = req.params;
+
+        let sql = await "SELECT forgot_token, first_reset_password FROM employee_register WHERE forgot_token = " + `'${token}'`
+
+        db.query(sql, async function (error,results,fields){
+
+
+            let forgotToken = results[0].forgot_token
+
+            // let first_reset_password = results[0].first_reset_password
+
+            if(forgotToken){
+
+                var cert = fs.readFileSync('jwtRS256.key.pub');
+                // Verify and decode the token
+                jwt.verify(token, cert, (err, decoded) => {
+
+                if (err) {
+                    // Token verification failed
+                    console.error('Invalid token:', err);
+                    return res.status(401).send('Invalid token');
+                }
+
+                if (decoded.expiresToken <= date) {
+                    // Token has expired
+                    console.log('Token has expired');
+                    return res.status(200).json({
+                        "status": 401,
+                        "message": "Token has expired" // error.sqlMessage
+                    })
+                    // return res.status(401).send('Token has expired');
+                }
+                // Token is still valid
+                console.log('Token is valid');
+                // Continue with the password reset logic
+                // ...
+                res.send('Password reset page');
+                });
+              
+            }else{
+                return res.status(500).json({
+                    "status": 500,
+                    "message": "not user to system" // error.sqlMessage
+                })
+          
+              
+            }
+
+        })
+        
+    } catch (error) {
+        console.log(error);     
+    }
+
 })
-    
+
+
+
+
 
 module.exports = router

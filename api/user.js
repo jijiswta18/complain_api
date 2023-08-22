@@ -302,7 +302,7 @@ router.route('/user/resetePasswordLogin')
 
         let updateData = await {
             "password"              : hashedPassword,
-            // "first_reset_password"  : true
+            "first_reset_password"  : true
         }
         const sql_update = await 'UPDATE employee_register SET ? WHERE email = ?'
 

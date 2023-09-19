@@ -8,7 +8,9 @@ const bcrypt        = require('bcrypt')
 const jwt           = require('jsonwebtoken')
 const ldap          = require('ldapjs')
 const bodyParser    = require('body-parser')
+const nodemailer    = require("nodemailer");
 const fs            = require('fs');
+const { log } = require('console')
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
@@ -129,6 +131,8 @@ router.route('/backoffice/get/complainStep/:id')
     try {
         const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'` + "ORDER BY a.id"
         db.query(sql, async function(err, results, fields){
+
+            console.log(err);
             if (err) res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
@@ -286,9 +290,11 @@ router.route('/backoffice/login')
         const hashedPassword = await bcrypt.hash(password, 10)
         const sql = await 'SELECT * FROM admin WHERE username = ?';
         db.query(sql, username, async function (err, result, fields){
+          
             let user = await null
             if(result){
                 user = await result[0]
+              
                 const username_ad = await 'ad\\'+ user.username
                 client.bind(username_ad, password, async err =>  {
                     let updateData = await {}
@@ -313,7 +319,7 @@ router.route('/backoffice/login')
                         let dataToken = await {
                             "token"         :   newToken,
                             "expire"        :   date,
-                            "revoke"        :   '0',
+                            "revoke"        :   0,
                             "user_id"       :   user.id,
                             "roles"         :   'officer'
                         }
@@ -450,23 +456,30 @@ router.route('/backoffice/create/complainStep')
     try {
 
         let item = {
-            "complain_id"   : req.body.complain_id,
-            "admin_id"      : req.body.admin_id,
-            "register_id"   : req.body.register_id,
-            "detail"        : req.body.detail,
-            "date"          : date,
-            "status_call"   : req.body.status_call,
-            "check_corrupt" : req.body.check_corrupt,
-            "create_by"     : req.body.create_by,
-            "create_date"   : date,
-            "modified_by"   : req.body.modified_by,
-            "modified_date" : date
+            "complain_id"           : req.body.complain_id,
+            "admin_id"              : req.body.admin_id,
+            "register_id"           : req.body.register_id,
+            "detail"                : req.body.detail,
+            "date"                  : date,
+            "status_call"           : req.body.status_call,
+            "cancel_message_id"     : req.body.cancel_message_id,
+            "cancel_message_name"   : req.body.cancel_message_name,
+            "cancel_contact_id"     : req.body.cancel_contact_id,
+            "cancel_contact_name"     : req.body.cancel_contact_name,
+            "cancel_contact_url"    : req.body.cancel_contact_url,
+            "cancel_message_other"  : req.body.cancel_message_other,
+            "check_corrupt"         : req.body.check_corrupt,
+            "create_by"             : req.body.create_by,
+            "create_date"           : date,
+            "modified_by"           : req.body.modified_by,
+            "modified_date"         : date
         }
-    
+       
         let sql = "INSERT INTO employee_complain_step SET ? "
 
-
         db.query(sql,item, async function (error,results,fields){
+            console.log(error)
+           
 
             if (error) return res.status(500).json({
                 "status": 500,
@@ -487,8 +500,6 @@ router.route('/backoffice/create/complainStep')
 
             db.query(sql_update,[user, req.body.complain_id], async function (error2,results2,fields2){
 
-                console.log(error2);
-
                 if (error2) return res.status(500).json({
                     "status": 500,
                     "message": "Internal Server Error" // error.sqlMessage
@@ -499,6 +510,63 @@ router.route('/backoffice/create/complainStep')
                     "complain_step_id": results.insertId,
                     "check" : true
                 }
+
+                var smtp = await {
+                    host: 'mx.cgd.go.th', //set to your host name or ip
+                    port: 25, //25, 465, 587 depend on your 
+                    secure: false, // use SSL\
+
+                };
+                var smtpTransport = await nodemailer.createTransport(smtp);
+
+                let mailOptions = await {}
+
+                if(req.body.status_call == 2){
+                    mailOptions = {
+                
+                        from: "democom3@cgd.go.th",
+                        to: req.body.register_email,
+                        
+                        subject: 'เเจ้งผลการดำเนินการ ระบบรับเรื่องร้องเรียนทุจริต',
+                     
+                        html: `<p>เรียน คุณ${req.body.register_name}</p>` +
+                        `<p>รายการของท่าน อยู่ในสถานะ "${req.body.status_name}" </p>` +
+                        `<p>${req.body.cancel_message_name}</p>` +
+                        `<p>กรุณาร้องเรียนผ่านทางช่องทางนี้ค่ะ ${req.body.cancel_contact_url}</p>` +
+                        
+                        `<p>สามารถตรวจสอบข้อมูลได้ ตาม URL : ${req.protocol}://${req.hostname}/user/login </p>` +
+
+                        `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` 
+ 
+                    };
+
+                }else{
+                    mailOptions = {
+                
+                        from: "democom3@cgd.go.th",
+                        to: req.body.register_email,
+                        
+                        subject: 'เเจ้งผลการดำเนินการ ระบบรับเรื่องร้องเรียนทุจริต',
+                        html: `<p>เรียน คุณ${req.body.register_name}</p>` +
+                        `<p>รายการของท่าน อยู่ในสถานะ "${req.body.status_name}" </p>` +
+                        `<p>สามารถตรวจสอบข้อมูลได้ ตาม URL : ${req.protocol}://${req.hostname}/user/login </p>` +
+
+                        `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>`
+                              
+                    };
+                }
+
+                await smtpTransport.sendMail(mailOptions, function(error, response){
+                    smtpTransport.close();
+                    if(error){
+                        console.log('sent mail follow',error);
+                    //error handler
+                    }else{
+                    //success handler 
+                    console.log('send email success');
+                    }
+                });
+
     
                 return res.json(result)
 
@@ -507,22 +575,6 @@ router.route('/backoffice/create/complainStep')
           
         })
 
-        // db.query(sql, [user, req.body.userId], (error,results,fields)=>{
-    
-            
-        //     if (error) return res.status(500).json({
-        //         "status": 500,
-        //         "message": "Internal Server Error" // error.sqlMessage
-        //     })
-    
-        //     const result = {
-        //         "status": 200,
-        //         "data": results
-        //     }
-         
-        //     return res.json(result)
-        // })
-        
     } catch (error) {
         console.log(error);
     }
@@ -595,15 +647,13 @@ router.route('/backoffice/edit/complainStep')
 router.route('/backoffice/create/complainCorrupt')
 .post (async (req,res, next) => { 
 
+
+
     try {
-
-
+        console.log(req.body);
 
         let item = await{
             "complain_step_id"  : req.body.complain_step_id,
-            "reference_code"    : req.body.reference_code,
-            "date"              : req.body.date,
-            "detail"            : req.body.detail,
             "create_by"         : req.body.admin_id,
             "modified_by"       : req.body.admin_id,
             "create_date"       : date,
@@ -614,7 +664,7 @@ router.route('/backoffice/create/complainCorrupt')
 
         db.query(sql,item, async function (error,results,fields){
 
-           console.log(error);
+           console.log('=========',error);
 
            if (error) return res.status(500).json({
                 "status": 500,
@@ -723,20 +773,23 @@ router.route('/backoffice/complainStepFiles')
 
    
 })
-router.route('/backoffice/complainCorruptFiles')
+router.route('/backoffice/create/complainCorruptFiles')
 .post(async (req, res, next) => {
     try {
         let item = await {
+            "corrupt_id"        : req.body.corrupt_id,
+            "reference_code"    : req.body.reference_code,
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
             "file_type"         : req.body.file_type,
-            "corrupt_id"        : req.body.corrupt_id,
             "check_remove"      : req.body.check_remove,
+            "check_remove_file" : req.body.check_remove_file,
             "create_by"         : req.body.admin_id,
             "create_date"       : date,
             "modified_by"       : req.body.admin_id,
             "modified_date"     : date
         }
+
         let sql = await "INSERT INTO employee_corrupt_files SET ?"
         db.query(sql, item, async function (error,results,fields){
             if (error) return res.status(500).json({
@@ -746,9 +799,47 @@ router.route('/backoffice/complainCorruptFiles')
             item = await [{'id' : results.insertId, ...item}]
             const result = {
                 "status": 200,
-                "data": results.insertId
+                "corrupt_file_id": results.insertId
               }
             return res.json(result)
+        })
+    } catch (error) {
+        console.log('uploadFile', error);
+    }  
+})
+
+router.route('/backoffice/edit/complainCorruptFiles')
+.post(async (req, res, next) => {
+    try {
+        let item = await {
+            // "corrupt_id"        : req.body.corrupt_id,
+            "reference_code"    : req.body.reference_code,
+            "file_original"     : req.body.file_original,
+            "file_name"         : req.body.file_name,
+            "file_type"         : req.body.file_type,
+            "check_remove"      : req.body.check_remove,
+            "check_remove_file" : req.body.check_remove_file,
+            // "create_by"         : req.body.admin_id,
+            // "create_date"       : date,
+            "modified_by"       : req.body.admin_id,
+            "modified_date"     : date
+        }
+
+        console.log(item);
+        const sql_update = await 'UPDATE employee_corrupt_files SET ? WHERE id = ?'; 
+        db.query(sql_update, [item, req.body.id], async function (error,results,fields){
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "corrupt__file_id" : req.body.id
+            }
+
+            return res.json(result)
+           
         })
     } catch (error) {
         console.log('uploadFile', error);

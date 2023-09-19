@@ -121,7 +121,7 @@ router.route('/get/UrlFilesCorrupt')
 });
 
 
-router.route('/update/deleteCorruptFiles')
+router.route('/update/deleteCorrupt')
 .post(auth, async (req,res, next)=> { 
     try {
 
@@ -129,6 +129,37 @@ router.route('/update/deleteCorruptFiles')
             "check_remove"  : req.body.check_remove,
             "modified_by"   : req.body.admin_id,
             "modified_date" : date
+        }
+        let sql = "UPDATE employee_corrupt_files SET ? WHERE id = " + req.body.id
+
+        db.query(sql, item, (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+router.route('/update/deleteCorruptFile')
+.post(auth, async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove_file"     : req.body.check_remove_file,
+            "modified_by"           : req.body.admin_id,
+            "modified_date"         : date
         }
         let sql = "UPDATE employee_corrupt_files SET ? WHERE id = " + req.body.id
 

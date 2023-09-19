@@ -142,7 +142,8 @@ router.route('/user/get/complainStep/:id')
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
+        // const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}' AND status_call IN (0,1,2)` 
+        const sql = await "SELECT * FROM employee_complain_step  WHERE complain_id = " + `'${req.params.id}'` 
 
         db.query(sql, async function(err, result, fields){
 
@@ -324,15 +325,11 @@ router.route('/user/forgot-password')
 
     const { email } = req.body;
 
-    console.log(email);
-
     try {
 
         const sql = await "SELECT id, email FROM employee_register  WHERE email = " + `'${email}'`
 
         db.query(sql, async function(err, result, fields){
-
-            console.log(err);
 
             let user = await null
 

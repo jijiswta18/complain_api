@@ -314,11 +314,22 @@ router.route('/backoffice/login')
                 
                     db.query(sql, [updateData, username], async function (err, result2, fields) {
 
-                        console.log(result2);
+                    
+                        const currentTimestamp = Math.floor(Date.now() / 1000);
+
+                        const expiresIn = 3600; // Expires in 1 hour (adjust as needed)
+
+                        const newExpiration = currentTimestamp + expiresIn;
+        
+                        const momentObj = moment.unix(newExpiration);
+                
+                        const formattedDateTime = momentObj.format('YYYY-MM-DD HH:mm:ss');
+
+                        console.log(formattedDateTime);
                         
                         let dataToken = await {
                             "token"         :   newToken,
-                            "expire"        :   date,
+                            "expire"        :   formattedDateTime,
                             "revoke"        :   0,
                             "user_id"       :   user.id,
                             "roles"         :   'officer'

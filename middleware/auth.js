@@ -32,10 +32,13 @@ const verifyToken = (req, res, next) => {
         const sql = "SELECT token.expire, token.revoke FROM token WHERE token = " + `'${token}'`
 
         db.query(sql,  function(err, result, fields){
-            if(result[0].revoke !== '0'){
+            if(result[0].revoke === 1){
+
+                console.log('revoke');
+
                 res.status(401).json({
                     "status": 401,
-                    "error": "Invalid Token" // error.sqlMessage
+                    "message": "Invalid Token" // error.sqlMessage
                 })
 
                 res.send({
@@ -43,7 +46,19 @@ const verifyToken = (req, res, next) => {
                   })
             
             }else{
+
+                const expireDateTime = moment(result[0].expire).format('YYYY-MM-DD HH:mm:ss')
+
                 const currentTimestamp = Math.floor(Date.now() / 1000);
+
+                const momentCurrentTimestamp = moment.unix(currentTimestamp);
+
+                const formattedCurrentDateTime = momentCurrentTimestamp.format('YYYY-MM-DD HH:mm:ss')
+
+                console.log( 'currentTimestamp', formattedCurrentDateTime);
+                console.log( 'expireDateTime', expireDateTime);
+
+                // const currentTimestamp = Math.floor(Date.now() / 1000);
 
                 const expiresIn = 3600; // Expires in 1 hour (adjust as needed)
         
@@ -52,25 +67,35 @@ const verifyToken = (req, res, next) => {
                 const momentObj = moment.unix(newExpiration);
         
                 const formattedDateTime = momentObj.format('YYYY-MM-DD HH:mm:ss');
-        
-                const sql_update = 'UPDATE token SET ? WHERE token = ?'
-        
-                db.query(sql_update,[{"expire" : formattedDateTime}, token], function (error,results_token,fields){
 
-                    if (error) return res.status(500).json({
-                        "status": 500,
-                        "message": "Internal Server Error" // error.sqlMessage
-                    })
+                if(expireDateTime < formattedCurrentDateTime){
+
+                    console.log('Token Expire');
                     
-                })
+                    res.status(401).json({
+                        "status": 401,
+                        "message": "Token Expire" // error.sqlMessage
+                    })
+    
+                    res.send({
+                        // order details
+                      })
+
+                }else{
+                    const sql_update = 'UPDATE token SET ? WHERE token = ?'
+        
+                    db.query(sql_update,[{"expire" : formattedDateTime}, token], function (error,results_token,fields){
+    
+                        if (error) return res.status(500).json({
+                            "status": 500,
+                            "message": "Internal Server Error" // error.sqlMessage
+                        })
+                        
+                    })
+                }
+        
+              
             }
-
-            
-
-            // if (err) res.status(500).json({
-            //     "status": 500,
-            //     "message": "Internal Server Error" // error.sqlMessage
-            // })
 
         })
 

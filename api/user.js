@@ -72,7 +72,7 @@ function generateStrongPassword(length) {
 }
 
 router.route('/user/get/complainDetail/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = await "SELECT * FROM employee_complain WHERE id = " + `'${req.params.id}'`
         db.query(sql, async function(err, result, fields){
@@ -110,7 +110,7 @@ router.route('/user/get/complainDetail/:id')
 
 
 router.route('/user/get/listFollow/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
 
     try {
 
@@ -138,7 +138,7 @@ router.route('/user/get/listFollow/:id')
 
 
 router.route('/user/get/complainStep/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
 
     try {
 
@@ -824,9 +824,6 @@ router.route('/user/complain')
 .post(async (req, res, next) => {
 
     try {
-
-        // let item = req.body
-
         let item = await {
             "name"              : req.body.name,
             "lastname"          : req.body.lastname,
@@ -844,17 +841,16 @@ router.route('/user/complain')
             "modified_by"       : req.body.register_id,
             "modified_date"     : date,
         }
-
-        // insert table employee_register
     
         let sql = await "INSERT INTO employee_complain SET ? "
     
         db.query(sql,item, async function (error,results,fields){
 
+            console.log("INSERT employee_complain", error);
   
             if (error) return res.status(500).json({
                 "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
+                "message": "Internal Server Error " // error.sqlMessage
             })
 
             item = await [{'id' : results.insertId,...item}]
@@ -878,6 +874,8 @@ router.route('/user/complain')
 
             db.query(sql_step,item_step, async function (error,results_step,fields){
 
+                console.log("INSERT employee_complain_step", error);
+
                 if (error) return res.status(500).json({
                     "status": 500,
                     "message": "Internal Server Error" // error.sqlMessage
@@ -892,6 +890,7 @@ router.route('/user/complain')
 
                 db.query(sql_select, async function (err, results2, fields){
 
+                    console.log("SELECT employee_reference", err);
 
                     let code =  await results2[0].code
 
@@ -921,6 +920,8 @@ router.route('/user/complain')
 
                     db.query(sql_no, item_no, async function (error,results_no,fields){
 
+                        console.log("INSERT employee_reference", error);
+
                         if (error) return res.status(500).json({
                             "status": 500,
                             "message": "Internal Server Error" // error.sqlMessage
@@ -936,6 +937,8 @@ router.route('/user/complain')
     
                         db.query(sql_update, [update_no, results.insertId], async function (err, results_update, fields){
 
+                            console.log("UPDATE employee_complain", err);
+
                              const result = {
                                 "status"        : 200,
                                 "complain_id"   : results.insertId
@@ -948,10 +951,7 @@ router.route('/user/complain')
 
                 })
 
-          
 
-            // console.log(updateData);
-  
            
         })
         

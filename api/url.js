@@ -23,7 +23,7 @@ moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 router.route('/get/pdf/UrlFilesComplain')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
 
     try {
 
@@ -43,7 +43,7 @@ router.route('/get/pdf/UrlFilesComplain')
 });
 
 router.route('/get/UrlFilesComplain')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
     try {
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
         const url               = await fullUrl+"/uploads/complain/"+req.query.filename;
@@ -64,7 +64,7 @@ router.route('/get/UrlFilesComplain')
 });
 
 router.route('/get/pdf/UrlFilesComplainStep')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
     try {
         var data = fs.readFileSync("public/uploads/complain_step/" +req.query.filename);
         // var data = fs.readFileSync("public/uploads/complain_step/"+req.query.filename);
@@ -77,7 +77,7 @@ router.route('/get/pdf/UrlFilesComplainStep')
 });
 
 router.route('/get/UrlFilesComplainStep')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
     try {
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
         const url               = await fullUrl+"/uploads/complain_step/"+req.query.filename;
@@ -93,7 +93,7 @@ router.route('/get/UrlFilesComplainStep')
 });
 
 router.route('/get/pdf/UrlFilesCorrupt')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
     try {
         var data = fs.readFileSync("public/uploads/corrupt/"+req.query.filename);
         res.contentType("application/pdf");
@@ -105,7 +105,7 @@ router.route('/get/pdf/UrlFilesCorrupt')
 });
 
 router.route('/get/UrlFilesCorrupt')
-.get(auth, async (req,res, next)=> { 
+.get(auth(), async (req,res, next)=> { 
     try {
         const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
         const url               = await fullUrl+"/uploads/corrupt/"+req.query.filename;
@@ -122,7 +122,7 @@ router.route('/get/UrlFilesCorrupt')
 
 
 router.route('/update/deleteCorrupt')
-.post(auth, async (req,res, next)=> { 
+.post(auth(), async (req,res, next)=> { 
     try {
 
         let item = {
@@ -153,7 +153,7 @@ router.route('/update/deleteCorrupt')
 });
 
 router.route('/update/deleteCorruptFile')
-.post(auth, async (req,res, next)=> { 
+.post(auth(), async (req,res, next)=> { 
     try {
 
         let item = {

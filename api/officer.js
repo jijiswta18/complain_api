@@ -10,7 +10,6 @@ const ldap          = require('ldapjs')
 const bodyParser    = require('body-parser')
 const nodemailer    = require("nodemailer");
 const fs            = require('fs');
-const { log } = require('console')
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
@@ -50,7 +49,7 @@ async function generateToken(id) {
 
 
 router.route('/backoffice/get/listComplain')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = await "SELECT * FROM employee_complain WHERE status_call = 0 ORDER BY id DESC"
         db.query(sql, async function(err, result, fields){ 
@@ -70,7 +69,7 @@ router.route('/backoffice/get/listComplain')
 })
 
 router.route('/get/registerDetail/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = await "SELECT id, email, name, lastname, gender, age, phone, phone_other, address  FROM employee_register WHERE id = " + `'${req.params.id}'`
         db.query(sql, async function(err, result, fields){
@@ -92,7 +91,7 @@ router.route('/get/registerDetail/:id')
 
 
 router.route('/backoffice/get/listFollow')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         let id = req.query.id
         let roles = req.query.roles
@@ -127,7 +126,7 @@ router.route('/backoffice/get/listFollow')
 
 
 router.route('/backoffice/get/complainStep/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail  FROM employee_complain_step a LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'` + "ORDER BY a.id"
         db.query(sql, async function(err, results, fields){
@@ -150,7 +149,7 @@ router.route('/backoffice/get/complainStep/:id')
 
 
 router.route('/backoffice/get/ComplainStepFiles/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = await "SELECT * FROM employee_operation_files  WHERE complain_step_id = " + `'${req.params.id}'` 
         db.query(sql, async function(err, result, fields){
@@ -170,7 +169,7 @@ router.route('/backoffice/get/ComplainStepFiles/:id')
 })
 
 router.route('/backoffice/get/CorruptFiles/:id')
-.get(auth, async (req, res, next) => {
+.get(auth(), async (req, res, next) => {
     try {
         const sql = await "SELECT * FROM employee_corrupt_files  WHERE corrupt_id = " + `'${req.params.id}' AND check_remove = 0`
 
@@ -194,7 +193,7 @@ router.route('/backoffice/get/CorruptFiles/:id')
 })
 
 router.route('/backoffice/get/listUser')
-.get(auth, (req, res, next) => { 
+.get(auth(), (req, res, next) => { 
     // แสดงข้อมูลทั้งหมด
     const sql = 'SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin ORDER BY id DESC';
     db.query(sql, async function (err, results, fields) {
@@ -211,7 +210,7 @@ router.route('/backoffice/get/listUser')
 })
 
 router.route('/backoffice/get/userDetail/:id')
-.get(auth,(req, res, next) => { 
+.get(auth(),(req, res, next) => { 
     // แสดงข้อมูลทั้งหมด
     const sql = "SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin WHERE id = " + `'${req.params.id}'`
     db.query(sql, async function (err, results, fields) {
@@ -229,7 +228,7 @@ router.route('/backoffice/get/userDetail/:id')
 })
 
 router.route('/backoffice/get/listRegister')
-.get(auth, async (req, res, next) => { 
+.get(auth(), async (req, res, next) => { 
 
     try {
         // let id = req.query.id
@@ -259,16 +258,20 @@ router.route('/backoffice/get/listRegister')
 })
 
 router.route('/backoffice/get/registerDetail/:id')
-.get(auth, async (req, res, next) => { 
+.get(auth(), async (req, res, next) => { 
+
+ 
+    // res.setHeader('Content-Type', 'application/json');
+    // res.status(200);
 
     try {
         const sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, province_name, district_id, district_name, subdistrict_id, subdistrict_name, postcode  FROM employee_register WHERE id = " + `'${req.params.id} ' ORDER BY id DESC `
         db.query(sql, async function(err, results, fields){
-            if (err) return res.status(500).json({
+            if (err) return await res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
             })
-            const result = {
+            const result = await {
                 "status": 200,
                 "data"  : results, 
             }

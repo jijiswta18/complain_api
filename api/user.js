@@ -187,9 +187,21 @@ router.route('/user/login')
                     const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?'; 
                     db.query(sql_update, [updateData, user.id], async function (err, result2, fields) {
 
+                        const currentTimestamp = Math.floor(Date.now() / 1000);
+
+                        const expiresIn = 3600; // Expires in 1 hour (adjust as needed)
+
+                        const newExpiration = currentTimestamp + expiresIn;
+        
+                        const momentObj = moment.unix(newExpiration);
+                
+                        const formattedDateTime = momentObj.format('YYYY-MM-DD HH:mm:ss');
+
+                        console.log(formattedDateTime);
+
                         let dataToken = await {
                             "token"         :   newToken,
-                            "expire"        :   date,
+                            "expire"        :   formattedDateTime,
                             "revoke"        :   '0',
                             "user_id"       :   user.id,
                             "roles"         :   'user'
@@ -436,13 +448,18 @@ router.route('/user/forgot-password')
                 };
                 var smtpTransport = await nodemailer.createTransport(smtp);
 
+                
+
                 const mailOptions = await {
                     from: "irac_noreply@cgd.go.th",
                     to: email,
                     subject: "ยืนยันการขอเปลี่ยนรหัสผ่าน เว็บไซต์ : ระบบรับเรื่องร้องเรียนทุจริต",
-                    text: `Please follow this link to reset your password: ${req.protocol}//${req.hostname}/user/reset-password/${forgot_token}`
+                    text: `
+                    อีเมลที่ใช้ : ${email} 
+                    เพื่อตั้งค่ารหัสผ่านใหม่ กรุณาคลิกที่ลิ้งต่อไปนี้: 
+                    URL : ${req.protocol}//${req.hostname}:8080/user/reset-password/${forgot_token}`
+                    // text: `เพื่อตั้งค่ารหัสผ่านใหม่ กรุณาคลิกที่ลิ้งต่อไปนี้: ${req.protocol}//${req.hostname}/user/reset-password/${forgot_token}`
                 };
-
 
                 await smtpTransport.sendMail(mailOptions, function(error, response){
                     smtpTransport.close();
@@ -655,31 +672,86 @@ router.route('/user/forgot/reset-password')
 router.route('/user/reset-password')
 .post(async (req, res, next) => {
 
-    const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        const id            = await req.body.id;
+        const password      = await req.body.password;
+        const newPassword   = await req.body.newPassword;
 
     try {
-        let item = await{
-            password        : hashedPassword,
-            id              : req.body.id,
-            modified_by     : req.body.id,
-            modified_date   : date
-        }
 
-        const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+        const sql_select = await 'SELECT password FROM employee_register WHERE id = ?';
 
-        db.query(sql_update, [item, req.body.id], async function(err, result, fields){
+        db.query(sql_select, id, async function (err, result_select, fields){
+            
+            let register = await null
 
-            if (err) return res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
+            if(result_select){
+                register = await result_select[0]
 
-            res.status(200).json({
-                message: "Password reset to Success.",
-                data: result
-            });
+                if(register && bcrypt.compare(password, register.password)){
+                    let checkPassword = await null
 
-        })
+                    if(password === register.password){
+                        checkPassword = await true
+                    }else if(await bcrypt.compare(password, register.password)){
+                        checkPassword = await true
+                    }else{
+                        checkPassword = await false
+                    }
+
+                    if(checkPassword){
+                        const hashedNewPassword = await bcrypt.hash(newPassword, 10)
+
+                        let updateResetPassword = await {
+                            "password"          : hashedNewPassword,
+                            "id"                : id,
+                            "modified_by"       : id,
+                            "modified_date"     : date
+                        }
+
+                        const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+
+                        db.query(sql_update, [updateResetPassword, id], async function(err, result_update, fields){
+
+                            return res.json({ message: 'Password reset to Success.' });
+
+                        })
+                            
+                    }else{
+                        res.status(400).send("error : password error");
+                    }
+                    
+                }else{
+                    res.status(400).send("error : password error");
+                }
+
+            
+            }
+
+        });
+
+
+        // let item = await{
+        //     password        : hashedNewPassword,
+        //     id              : req.body.id,
+        //     modified_by     : req.body.id,
+        //     modified_date   : date
+        // }
+
+        // const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?';
+
+        // db.query(sql_update, [item, req.body.id], async function(err, result, fields){
+
+        //     if (err) return res.status(500).json({
+        //         "status": 500,
+        //         "message": "Internal Server Error" // error.sqlMessage
+        //     })
+
+        //     res.status(200).json({
+        //         message: "Password reset to Success.",
+        //         data: result
+        //     });
+
+        // })
 
     } catch (error) {
        console.log(error); 

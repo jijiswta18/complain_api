@@ -97,7 +97,7 @@ router.route('/get/replyMessage')
 
     try {
 
-        const sql = await "SELECT id, message_detail FROM reply_message WHERE status = 1 AND check_remove = 0"
+        const sql = await "SELECT id, message_detail, message_detail_other FROM reply_message WHERE status = 1 AND check_remove = 0"
 
         db.query(sql, async function(err, result, fields){
             

@@ -884,9 +884,10 @@ router.route('/backoffice/edit/replyMessage')
     try {
 
         let item = {
-            "message_detail"    : req.body.message_detail,
-            "modified_by"       : req.body.modified_by,
-            "modified_date"     : date
+            "message_detail"            : req.body.message_detail,
+            "message_detail_other"      : req.body.message_detail_other,
+            "modified_by"               : req.body.modified_by,
+            "modified_date"             : date
         }
     
         let sql = "UPDATE reply_message SET ? WHERE id = ?"

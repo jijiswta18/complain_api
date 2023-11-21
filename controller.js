@@ -1,8 +1,6 @@
 
 exports.uploadFile = (req, res) => {
 
-
-
   if (!req.files || Object.keys(req.files).length === 0) {
     
     return res.status(400).json({ error: 'No file uploaded' });
@@ -16,23 +14,20 @@ exports.uploadFile = (req, res) => {
   if(files.length > 1){
     files.forEach((file, index) => {
 
-      console.log('forEach====================');
-      const number = index + 1 
-  
-      const arr_file = file.mimetype.split("/")
-  
-      let file_name = ''
-  
+      const number = index + 1;
+
+      const arr_file = file.mimetype.split("/");
+
+      let file_name = '';
+
       if(file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/png'){
-  
-        file_name = 'img' + types + id + '_' + number + '.' + arr_file[1] 
-  
+        file_name = 'img' + types + id + '_' + number + '.' + arr_file[1] ;
       }else if(file.mimetype === 'application/pdf'){
-  
-        file_name = 'pdf' + types + id + '_' + number + '.' + arr_file[1] 
+        file_name = 'pdf' + types + id + '_' + number + '.' + arr_file[1];
       }
-  
-      let filePath = null
+
+      let filePath = null;
+
       if(req.body.types === 'Complain'){
         filePath = __dirname + '/public/uploads/complain/' + file_name;
       }else if(req.body.types === 'ComplainStep'){
@@ -40,6 +35,7 @@ exports.uploadFile = (req, res) => {
       }else{
         filePath = __dirname + '/public/uploads/corrupt/' + file_name;
       }
+
       // Use the mv() method to save each file to the server
       file.mv(filePath, (err) => {
         if (err) {
@@ -48,19 +44,17 @@ exports.uploadFile = (req, res) => {
       });
     });
   }else{
-    console.log('====================');
+
     const arr_file = files.mimetype.split("/")
 
     let file_name = ''
 
     if(files.mimetype === 'image/jpeg' || files.mimetype === 'image/jpg' || files.mimetype === 'image/png'){
-  
       file_name = 'img' + types + id + '_' + '1' + '.' + arr_file[1] 
-
     }else if(files.mimetype === 'application/pdf'){
-
       file_name = 'pdf' + types + id + '_' + '1' + '.' + arr_file[1] 
     }
+
     let filePath = null
 
     if(types === 'Complain'){
@@ -76,12 +70,8 @@ exports.uploadFile = (req, res) => {
         console.error(error);
         return res.status(500).send('Error saving the file.');
       }
-
     });
-   
+    
   }
-
-
   res.json({ message: 'Files uploaded successfully' });
-
 };

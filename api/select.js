@@ -92,4 +92,57 @@ router.route('/get/subdistricts/:id')
 })
 
 
+router.route('/get/replyMessage')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT id, message_detail FROM reply_message WHERE status = 1 AND check_remove = 0"
+
+        db.query(sql, async function(err, result, fields){
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+router.route('/get/contactChannels')
+.get(async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT id, contact_name, contact_link FROM contact_channels WHERE status = 1 AND check_remove = 0"
+
+        db.query(sql, async function(err, result, fields){
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log(error);     
+    }
+
+})
+
+
 module.exports = router

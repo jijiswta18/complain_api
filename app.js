@@ -18,9 +18,10 @@ const userApi       = require('./api/user');
 const officerApi    = require('./api/officer');
 const selectApi     = require('./api/select');
 const urlFilesApi   = require('./api/url');
+const reportApi   = require('./api/report');
 const controller    = require('./controller');
 // เรียกใช้งาน indexRouter
-app.use('/api', [userApi, officerApi, selectApi, urlFilesApi]);
+app.use('/api', [userApi, officerApi, selectApi, urlFilesApi, reportApi]);
 
 app.use(express.static('public'));
 
@@ -40,9 +41,7 @@ app.use(( req, res, next) => {
 
 app.post('/api/uploadsFile', controller.uploadFile, (req, res) => {
 
- 
-    console.log('111111111111111111111111', req.files);
-  
+    console.log(req.files);
   
   });
 
@@ -58,9 +57,7 @@ app.post('/api/logout', async (req, res, next) => {
 
         const formattedDateTime = momentObj.format('YYYY-MM-DD HH:mm:ss');
 
-
         let sql_token = await 'UPDATE token SET ? WHERE token = ?'
-
 
         let update_token = await {
             "expire"   : formattedDateTime,
@@ -77,11 +74,9 @@ app.post('/api/logout', async (req, res, next) => {
             res.send({msg : 'You have been Logged Out' });  
         })
     } catch (error) {
-        console.log(error);
+        console.log('logout',error);
     }
 })
-
-
 
 
 app.listen(3000, () =>{

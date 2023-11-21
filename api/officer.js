@@ -1,6 +1,5 @@
 const express       = require('express')
 const moment        = require('moment')
-const multer        = require('multer')
 const auth          = require('../middleware/auth')
 const router        = express.Router()
 const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
@@ -29,15 +28,13 @@ moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 
-
 async function generateToken(id) {
 
     const payload = await {
         jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
         "username": id.userId,
         "role": "admin",
-        "expiresIn": "1h"
-            
+        "expiresIn": "1h"    
     }
 
     const privateKey = await fs.readFileSync('jwtRS256.key');
@@ -63,7 +60,7 @@ router.route('/backoffice/get/listComplain')
             }); 
         })
     } catch (error) {
-        console.log(error);     
+        console.log('get/listComplain',error);     
     }
 
 })
@@ -85,7 +82,7 @@ router.route('/get/registerDetail/:id')
         })
 
     } catch (error) {
-        console.log(error);     
+        console.log('getRegisterDetailId',error);     
     }
 })
 
@@ -93,22 +90,20 @@ router.route('/get/registerDetail/:id')
 router.route('/backoffice/get/listFollow')
 .get(auth(), async (req, res, next) => {
     try {
+
         let id = req.query.id
+
         let roles = req.query.roles
+
         let sql = ''
+
         if(roles == 'general'){
-            // const sql = "SELECT a.*, b.id as corrupt_id, b.reference_code, b.date as corrupt_date,  b.detail as corrupt_detail'  
-            // 'FROM employee_complain_step a '
-            // 'LEFT JOIN employee_complain_corrupt b on a.id = b.complain_step_id  WHERE a.complain_id = " + `'${req.params.id}'` + "ORDER BY a.id"
-            
             sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.admin_id = " + `'${id}' AND a.status_call != 0 ORDER BY id DESC`
-            // sql = await "SELECT * FROM employee_complain WHERE admin_id = " + `'${id}' AND status_call != 0 ORDER BY id DESC`
         } else if(roles == 'admin'){
              sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.status_call != 0 ORDER BY a.id DESC"
-            //  sql = await "SELECT * FROM employee_complain WHERE status_call != 0 ORDER BY id DESC"
         }
-        db.query(sql, async function(err, result, fields){
 
+        db.query(sql, async function(err, result, fields){
           
             if (err) res.status(500).json({
                 "status": 500,
@@ -120,7 +115,7 @@ router.route('/backoffice/get/listFollow')
             }); 
         })
     } catch (error) {
-        console.log(error);     
+        console.log('getListFollow',error);     
     }
 })
 
@@ -142,7 +137,7 @@ router.route('/backoffice/get/complainStep/:id')
             }); 
         })
     } catch (error) {
-        console.log(error);     
+        console.log('getComplainStepId',error);     
     }
 
 })
@@ -164,7 +159,7 @@ router.route('/backoffice/get/ComplainStepFiles/:id')
             }); 
         })
     } catch (error) {
-        console.log(error);     
+        console.log('getComplainStepFilesId',error);     
     }
 })
 
@@ -187,7 +182,7 @@ router.route('/backoffice/get/CorruptFiles/:id')
         })
 
     } catch (error) {
-        console.log(error);     
+        console.log('getCorruptFilesId',error);     
     }
 
 })
@@ -231,14 +226,8 @@ router.route('/backoffice/get/listRegister')
 .get(auth(), async (req, res, next) => { 
 
     try {
-        // let id = req.query.id
-        // let sql = ''
 
-        // if(id != undefined){
-        //     sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, district_id, subdistrict_id, postcode FROM employee_register WHERE id = " + `'${id}'`;
-        // }else{
-            const sql = 'SELECT id, email, name, lastname, phone, create_date FROM employee_register ORDER BY id DESC';
-        // }
+        const sql = 'SELECT id, email, name, lastname, phone, create_date FROM employee_register ORDER BY id DESC';
 
         db.query(sql, async function(err, results, fields){
             if (err) return res.status(500).json({
@@ -253,17 +242,12 @@ router.route('/backoffice/get/listRegister')
         })
 
     } catch (error) {
-      console.log(error);  
+      console.log('getListRegister',error);  
     }
 })
 
 router.route('/backoffice/get/registerDetail/:id')
 .get(auth(), async (req, res, next) => { 
-
- 
-    // res.setHeader('Content-Type', 'application/json');
-    // res.status(200);
-
     try {
         const sql = "SELECT id, email, name, lastname, age, phone, phone_other, address, province_id, province_name, district_id, district_name, subdistrict_id, subdistrict_name, postcode  FROM employee_register WHERE id = " + `'${req.params.id} ' ORDER BY id DESC `
         db.query(sql, async function(err, results, fields){
@@ -278,12 +262,9 @@ router.route('/backoffice/get/registerDetail/:id')
             return res.json(result)
         })
     } catch (error) {
-      console.log(error);  
+      console.log('getRegisterDetailId',error);  
     }
 })
-
-
-
 
 router.route('/backoffice/login')
 .post(async (req, res, next) => {
@@ -364,7 +345,7 @@ router.route('/backoffice/login')
         });
 
     } catch (error) {
-        console.log(error)
+        console.log('login',error)
     }
 })
 
@@ -417,7 +398,7 @@ router.route('/backoffice/create/user')
         })
     } catch (err) {
 
-        console.log(err);
+        console.log('createUser',err);
         
     }
  
@@ -459,7 +440,7 @@ router.route('/backoffice/edit/user')
         })
         
     } catch (error) {
-        console.log(error);
+        console.log('editUser',error);
     }
 
 });
@@ -590,7 +571,7 @@ router.route('/backoffice/create/complainStep')
         })
 
     } catch (error) {
-        console.log(error);
+        console.log('createComplainStep',error);
     }
 
 });
@@ -653,7 +634,7 @@ router.route('/backoffice/edit/complainStep')
         })
         
     } catch (error) {
-        console.log(error);
+        console.log('editComplainStep',error);
     }
 
 });
@@ -661,10 +642,7 @@ router.route('/backoffice/edit/complainStep')
 router.route('/backoffice/create/complainCorrupt')
 .post (async (req,res, next) => { 
 
-
-
     try {
-        console.log(req.body);
 
         let item = await{
             "complain_step_id"  : req.body.complain_step_id,
@@ -677,8 +655,6 @@ router.route('/backoffice/create/complainCorrupt')
         let sql = await "INSERT INTO employee_complain_corrupt SET ? "
 
         db.query(sql,item, async function (error,results,fields){
-
-           console.log('=========',error);
 
            if (error) return res.status(500).json({
                 "status": 500,
@@ -695,7 +671,7 @@ router.route('/backoffice/create/complainCorrupt')
             return res.json(result)
         })  
     } catch (error) {
-        console.log(error);
+        console.log('createComplainCorrupt',error);
     }
 
 });
@@ -735,13 +711,12 @@ router.route('/backoffice/edit/complainCorrupt')
             return res.json(result)
         })  
     } catch (error) {
-        console.log(error);
+        console.log('editComplainCorrupt',error);
 
         
     }
 
 });
-
 
 router.route('/backoffice/complainStepFiles')
 .post(async (req, res, next) => {
@@ -780,13 +755,14 @@ router.route('/backoffice/complainStepFiles')
         })
 
     } catch (error) {
-        console.log('uploadFile', error);
+        console.log('complainStepFiles', error);
     }
   
  
 
    
 })
+
 router.route('/backoffice/create/complainCorruptFiles')
 .post(async (req, res, next) => {
     try {
@@ -818,7 +794,7 @@ router.route('/backoffice/create/complainCorruptFiles')
             return res.json(result)
         })
     } catch (error) {
-        console.log('uploadFile', error);
+        console.log('complainCorruptFiles', error);
     }  
 })
 
@@ -826,15 +802,12 @@ router.route('/backoffice/edit/complainCorruptFiles')
 .post(async (req, res, next) => {
     try {
         let item = await {
-            // "corrupt_id"        : req.body.corrupt_id,
             "reference_code"    : req.body.reference_code,
             "file_original"     : req.body.file_original,
             "file_name"         : req.body.file_name,
             "file_type"         : req.body.file_type,
             "check_remove"      : req.body.check_remove,
             "check_remove_file" : req.body.check_remove_file,
-            // "create_by"         : req.body.admin_id,
-            // "create_date"       : date,
             "modified_by"       : req.body.admin_id,
             "modified_date"     : date
         }
@@ -856,9 +829,301 @@ router.route('/backoffice/edit/complainCorruptFiles')
            
         })
     } catch (error) {
-        console.log('uploadFile', error);
+        console.log('complainCorruptFiles', error);
     }  
 })
+
+router.route('/backoffice/get/replyMessage')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM reply_message WHERE check_remove = 0 ORDER BY id DESC"
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getReplyMessage',error);     
+    }
+
+})
+
+router.route('/backoffice/create/replyMessage')
+.post(async (req, res, next) => {
+    try {
+
+        let item = await req.body
+       
+        let sql = await "INSERT INTO reply_message SET ?"
+        db.query(sql, item, async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            item = await [{'id' : results.insertId, ...item}]
+            const result = {
+                "status": 200,
+                // "corrupt_file_id": results.insertId
+              }
+            return res.json(result)
+        })
+    } catch (error) {
+        console.log('createReplyMessage', error);
+    }  
+})
+
+router.route('/backoffice/edit/replyMessage')
+.post (async (req,res, next) => { 
+
+    try {
+
+        let item = {
+            "message_detail"    : req.body.message_detail,
+            "modified_by"       : req.body.modified_by,
+            "modified_date"     : date
+        }
+    
+        let sql = "UPDATE reply_message SET ? WHERE id = ?"
+
+
+        db.query(sql,[item, req.body.id], async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+            }
+
+            return res.json(result)
+        })  
+    } catch (error) {
+        console.log('editReplyMessage',error);
+
+        
+    }
+
+});
+
+router.route('/backoffice/update/deleteReplyMessage')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove"  : req.body.check_remove,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE reply_message SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateDeleteReplyMessage',error);
+    }
+});
+
+router.route('/backoffice/update/replyMessageStatus')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        console.log(req.body);
+
+        let item = {
+            "status"        : req.body.status,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE reply_message SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateReplyMessageStatus',error);
+    }
+});
+
+router.route('/backoffice/get/contactChannels')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM contact_channels WHERE check_remove = 0 ORDER BY id DESC"
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getContactChannels',error);     
+    }
+
+})
+
+router.route('/backoffice/create/contactChannels')
+.post(async (req, res, next) => {
+    try {
+
+        let item = await req.body
+       
+        let sql = await "INSERT INTO contact_channels SET ?"
+        db.query(sql, item, async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            item = await [{'id' : results.insertId, ...item}]
+            const result = {
+                "status": 200,
+                // "corrupt_file_id": results.insertId
+              }
+            return res.json(result)
+        })
+    } catch (error) {
+        console.log('createContactChannels', error);
+    }  
+})
+
+router.route('/backoffice/edit/contactChannels')
+.post (async (req,res, next) => { 
+
+    try {
+
+        let item = {
+            "contact_name"    : req.body.contact_name,
+            "contact_link"    : req.body.contact_link,
+            "modified_by"     : req.body.modified_by,
+            "modified_date"   : date
+        }
+    
+        let sql = "UPDATE contact_channels SET ? WHERE id = ?"
+
+
+        db.query(sql,[item, req.body.id], async function (error,results,fields){
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+            }
+
+            return res.json(result)
+        })  
+    } catch (error) {
+        console.log('editContactChannels',error);
+
+        
+    }
+
+});
+
+router.route('/backoffice/update/contactChannelsStatus')
+.post(auth(), async (req,res, next)=> { 
+    try {
+        let item = {
+            "status"        : req.body.status,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE contact_channels SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateContactChannelsStatus',error);
+    }
+});
+
+
+router.route('/backoffice/update/deleteContactChannels')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove"  : req.body.check_remove,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE contact_channels SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateDeleteContactChannels',error);
+    }
+});
+
 
 
 module.exports = router

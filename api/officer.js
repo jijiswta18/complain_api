@@ -1,18 +1,24 @@
-const express       = require('express')
-const moment        = require('moment')
-const auth          = require('../middleware/auth')
-const router        = express.Router()
-const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
-const bcrypt        = require('bcrypt')
-const jwt           = require('jsonwebtoken')
-const ldap          = require('ldapjs')
-const bodyParser    = require('body-parser')
+const express       = require('express');
+const moment        = require('moment');
+const auth          = require('../middleware/auth');
+const router        = express.Router();
+const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
+const bcrypt        = require('bcrypt');
+const jwt           = require('jsonwebtoken');
+const ldap          = require('ldapjs');
+const bodyParser    = require('body-parser');
 const nodemailer    = require("nodemailer");
 const fs            = require('fs');
+const CryptoJS      = require("crypto-js");
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 
+moment.locale('th');
+let date = moment().format('YYYY-MM-DD HH:mm:ss');
+
+
+/////////////////////// function //////////////////////////////////
 
 // Create LDAP client connection 
 const adConfiguration = {
@@ -22,10 +28,7 @@ const adConfiguration = {
   const client = ldap.createClient(adConfiguration)
   client.on('error', () => {
     // this will be your ECONNRESET message
-  })
-
-moment.locale('th');
-let date = moment().format('YYYY-MM-DD HH:mm:ss');
+});
 
 
 async function generateToken(id) {
@@ -45,6 +48,19 @@ async function generateToken(id) {
 }
 
 
+function hashFileName(fileName) {
+
+    const hashedFileName = CryptoJS.SHA256(fileName).toString(CryptoJS.enc.Hex);
+
+    const eightDigitNumber = parseInt(hashedFileName.substr(0, 8), 16);
+
+    return eightDigitNumber;
+}
+
+
+///////////////////////// GET ///////////////////////////////////
+
+// GET รายการรับเรื่องร้องเรียนทุจริต //
 router.route('/backoffice/get/listComplain')
 .get(auth(), async (req, res, next) => {
     try {
@@ -60,33 +76,11 @@ router.route('/backoffice/get/listComplain')
             }); 
         })
     } catch (error) {
-        console.log('get/listComplain',error);     
+        console.log('getlistComplain',error);     
     }
+});
 
-})
-
-router.route('/get/registerDetail/:id')
-.get(auth(), async (req, res, next) => {
-    try {
-        const sql = await "SELECT id, email, name, lastname, gender, age, phone, phone_other, address  FROM employee_register WHERE id = " + `'${req.params.id}'`
-        db.query(sql, async function(err, result, fields){
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-            res.status(200).json({
-                data: result,
-                message: "success"
-            })
- 
-        })
-
-    } catch (error) {
-        console.log('getRegisterDetailId',error);     
-    }
-})
-
-
+// GET รายการที่ต้องดำเนินการ //
 router.route('/backoffice/get/listFollow')
 .get(auth(), async (req, res, next) => {
     try {
@@ -117,9 +111,9 @@ router.route('/backoffice/get/listFollow')
     } catch (error) {
         console.log('getListFollow',error);     
     }
-})
+});
 
-
+// GET รายละเอียดขั้นตอนที่ต้องดำเนินการ //
 router.route('/backoffice/get/complainStep/:id')
 .get(auth(), async (req, res, next) => {
     try {
@@ -139,89 +133,9 @@ router.route('/backoffice/get/complainStep/:id')
     } catch (error) {
         console.log('getComplainStepId',error);     
     }
+});
 
-})
-
-
-router.route('/backoffice/get/ComplainStepFiles/:id')
-.get(auth(), async (req, res, next) => {
-    try {
-        const sql = await "SELECT * FROM employee_operation_files  WHERE complain_step_id = " + `'${req.params.id}'` 
-        db.query(sql, async function(err, result, fields){
-            
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-    } catch (error) {
-        console.log('getComplainStepFilesId',error);     
-    }
-})
-
-router.route('/backoffice/get/CorruptFiles/:id')
-.get(auth(), async (req, res, next) => {
-    try {
-        const sql = await "SELECT * FROM employee_corrupt_files  WHERE corrupt_id = " + `'${req.params.id}' AND check_remove = 0`
-
-        db.query(sql, async function(err, result, fields){
-
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-
-    } catch (error) {
-        console.log('getCorruptFilesId',error);     
-    }
-
-})
-
-router.route('/backoffice/get/listUser')
-.get(auth(), (req, res, next) => { 
-    // แสดงข้อมูลทั้งหมด
-    const sql = 'SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin ORDER BY id DESC';
-    db.query(sql, async function (err, results, fields) {
-        if (err) return res.status(500).json({
-            "status": 500,
-            "message": "Internal Server Error" // error.sqlMessage
-        })
-        const result = {
-            "status": 200,
-            "data"  : results, 
-        }
-        return res.json(result)
-    })
-})
-
-router.route('/backoffice/get/userDetail/:id')
-.get(auth(),(req, res, next) => { 
-    // แสดงข้อมูลทั้งหมด
-    const sql = "SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin WHERE id = " + `'${req.params.id}'`
-    db.query(sql, async function (err, results, fields) {
-        console.log(err);
-        if (err) return res.status(500).json({
-            "status": 500,
-            "message": "Internal Server Error" // error.sqlMessage
-        })
-        const result = {
-            "status": 200,
-            "data"  : results, 
-        }
-        return res.json(result)
-    })
-})
-
+// GET รายการข้อมูลบุคลากร //
 router.route('/backoffice/get/listRegister')
 .get(auth(), async (req, res, next) => { 
 
@@ -244,8 +158,9 @@ router.route('/backoffice/get/listRegister')
     } catch (error) {
       console.log('getListRegister',error);  
     }
-})
+});
 
+// GET รายละเอียดข้อมูลบุคลากร //
 router.route('/backoffice/get/registerDetail/:id')
 .get(auth(), async (req, res, next) => { 
     try {
@@ -264,6 +179,253 @@ router.route('/backoffice/get/registerDetail/:id')
     } catch (error) {
       console.log('getRegisterDetailId',error);  
     }
+});
+
+// router.route('/get/registerDetail/:id')
+// .get(auth(), async (req, res, next) => {
+//     try {
+//         const sql = await "SELECT id, email, name, lastname, gender, age, phone, phone_other, address  FROM employee_register WHERE id = " + `'${req.params.id}'`
+//         db.query(sql, async function(err, result, fields){
+//             if (err) res.status(500).json({
+//                 "status": 500,
+//                 "message": "Internal Server Error" // error.sqlMessage
+//             })
+//             res.status(200).json({
+//                 data: result,
+//                 message: "success"
+//             })
+ 
+//         })
+
+//     } catch (error) {
+//         console.log('getRegisterDetailId',error);     
+//     }
+// });
+
+// GET รายการข้อมูลผู้ร้องเรียน //
+router.route('/backoffice/get/listUser')
+.get(auth(), (req, res, next) => { 
+    // แสดงข้อมูลทั้งหมด
+    const sql = 'SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin ORDER BY id DESC';
+    db.query(sql, async function (err, results, fields) {
+        if (err) return res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error" // error.sqlMessage
+        })
+        const result = {
+            "status": 200,
+            "data"  : results, 
+        }
+        return res.json(result)
+    })
+});
+
+// GET รายละเอียดข้อมูลผู้ร้องเรียน //
+router.route('/backoffice/get/userDetail/:id')
+.get(auth(),(req, res, next) => { 
+    // แสดงข้อมูลทั้งหมด
+    const sql = "SELECT id, username, name, lastname, position, divisions, roles, status, state, create_by, create_date, modified_by, modified_date FROM admin WHERE id = " + `'${req.params.id}'`
+    db.query(sql, async function (err, results, fields) {
+        console.log(err);
+        if (err) return res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error" // error.sqlMessage
+        })
+        const result = {
+            "status": 200,
+            "data"  : results, 
+        }
+        return res.json(result)
+    })
+});
+
+// GET รายการข้อความตอบกลับผู้ใช้งาน //
+router.route('/backoffice/get/replyMessage')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM reply_message WHERE check_remove = 0 ORDER BY id DESC"
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getReplyMessage',error);     
+    }
+
+});
+
+// GET รายการช่องทางการติดต่อ //
+router.route('/backoffice/get/contactChannels')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM contact_channels WHERE check_remove = 0 ORDER BY id DESC"
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getContactChannels',error);     
+    }
+
+});
+
+// GET รายการช่องทางการประกาศ //
+router.route('/backoffice/get/announce')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM announce_list WHERE check_remove = 0 ORDER BY id DESC"
+
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+
+        })
+    } catch (error) {
+        console.log('getAnnounce',error);     
+    }
+
+});
+
+// GET รายการช่องทางการสร้างแบนเนอร์ //
+router.route('/backoffice/get/banner')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM banners_list WHERE check_remove = 0 ORDER BY id DESC"
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getBanner',error);     
+    }
+
+});
+
+// GET ไฟล์แนบการร้องเรียน //
+router.route('/backoffice/get/ComplainStepFiles/:id')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM employee_operation_files  WHERE complain_step_id = " + `'${req.params.id}'` 
+        db.query(sql, async function(err, result, fields){
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+    } catch (error) {
+        console.log('getComplainStepFilesId',error);     
+    }
+});
+
+// GET ไฟล์แนบการทุจริต //
+router.route('/backoffice/get/CorruptFiles/:id')
+.get(auth(), async (req, res, next) => {
+    try {
+        const sql = await "SELECT * FROM employee_corrupt_files  WHERE corrupt_id = " + `'${req.params.id}' AND check_remove = 0`
+
+        db.query(sql, async function(err, result, fields){
+
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log('getCorruptFilesId',error);     
+    }
+
+});
+
+
+///////////////////////// POST ///////////////////////////////////
+router.route('/backoffice/sendFile')
+.post(async (req, res, next) => {
+
+    console.log('===========testtttt');
+    console.log(req.body);
+
+    var smtp = await {
+        host: 'mx.cgd.go.th', //set to your host name or ip
+        port: 25, //25, 465, 587 depend on your 
+        secure: false, // use SSL\
+
+
+        
+    };
+
+    const fullUrl           = await `${req.protocol}://${req.hostname}:3000`;
+    const url               = await fullUrl+"/uploads/complain_step/testfile.pdf";
+ 
+    var smtpTransport = await nodemailer.createTransport(smtp);
+
+    let mailOptions = await {}
+
+
+
+    mailOptions = await {
+        from: "democom3@cgd.go.th",
+        to: req.body.mail,
+        subject: 'File Attachment Example',
+        html: `<p>ทดสอบการส่งอีเมล</p>` +
+        `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` ,
+        attachments: [
+            {
+              filename: 'testfile.pdf', // change this to the name of your file
+              path: url, // change this to the path of your file
+            },
+          ],
+    };
+
+    await smtpTransport.sendMail(mailOptions, function(error, response){
+        smtpTransport.close();
+        if(error){
+            console.log('sent mail follow',error);
+        //error handler
+        }else{
+        //success handler 
+        console.log('send email success');
+        }
+    });
+
+
+    return res.json('success')
+
 })
 
 router.route('/backoffice/login')
@@ -349,8 +511,11 @@ router.route('/backoffice/login')
     }
 })
 
+
+
+// POST สร้าง User //
 router.route('/backoffice/create/user')
-.post(async (req, res, next) => {
+.post(auth(), async (req, res, next) => {
 
     try {
 
@@ -404,8 +569,9 @@ router.route('/backoffice/create/user')
  
 })
 
+// POST แก้ไข User //
 router.route('/backoffice/edit/user')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -445,8 +611,11 @@ router.route('/backoffice/edit/user')
 
 });
 
+
+
+// POST ขั้นตอนการรับเรื่อง //
 router.route('/backoffice/create/complainStep')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -531,7 +700,9 @@ router.route('/backoffice/create/complainStep')
                         
                         `<p>สามารถตรวจสอบข้อมูลได้ ตาม URL : ${req.protocol}://${req.hostname}/user/login </p>` +
 
-                        `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` 
+                        `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` ,
+
+                     
  
                     };
 
@@ -576,8 +747,9 @@ router.route('/backoffice/create/complainStep')
 
 });
 
+// POST แก้ไขขั้นตอนการรับเรื่อง //
 router.route('/backoffice/edit/complainStep')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
         let items = {
@@ -639,8 +811,9 @@ router.route('/backoffice/edit/complainStep')
 
 });
 
+// POST ขั้นตอนการทุจริต //
 router.route('/backoffice/create/complainCorrupt')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -676,8 +849,9 @@ router.route('/backoffice/create/complainCorrupt')
 
 });
 
+// POST แก้ไขขั้นตอนการทุจริต //
 router.route('/backoffice/edit/complainCorrupt')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -718,8 +892,9 @@ router.route('/backoffice/edit/complainCorrupt')
 
 });
 
+// POST ขั้นตอนการแนบไฟล์รับเรื่อง //
 router.route('/backoffice/complainStepFiles')
-.post(async (req, res, next) => {
+.post(auth(), async (req, res, next) => {
     try {
 
         let item = await {
@@ -758,22 +933,28 @@ router.route('/backoffice/complainStepFiles')
         console.log('complainStepFiles', error);
     }
   
- 
-
-   
 })
 
+// POST ขั้นตอนการแนบไฟล์ทุจริต //
 router.route('/backoffice/create/complainCorruptFiles')
-.post(async (req, res, next) => {
+.post(auth(), async (req, res, next) => {
     try {
+
+        const arr_file          = await req.body.file_type.split("/")
+
+        const hashedFileName    = await hashFileName(req.body.file_original);
+
+        const fileName          = await hashedFileName + '.' + arr_file[1] 
+
+
         let item = await {
             "corrupt_id"        : req.body.corrupt_id,
             "reference_code"    : req.body.reference_code,
             "file_original"     : req.body.file_original,
-            "file_name"         : req.body.file_name,
+            "file_name"         : fileName,
             "file_type"         : req.body.file_type,
             "check_remove"      : req.body.check_remove,
-            "check_remove_file" : req.body.check_remove_file,
+            // "check_remove_file" : req.body.check_remove_file,
             "create_by"         : req.body.admin_id,
             "create_date"       : date,
             "modified_by"       : req.body.admin_id,
@@ -789,7 +970,8 @@ router.route('/backoffice/create/complainCorruptFiles')
             item = await [{'id' : results.insertId, ...item}]
             const result = {
                 "status": 200,
-                "corrupt_file_id": results.insertId
+                "corrupt_file_id": results.insertId,
+                "file_name" : fileName
               }
             return res.json(result)
         })
@@ -798,16 +980,34 @@ router.route('/backoffice/create/complainCorruptFiles')
     }  
 })
 
+// POST ขั้นตอนการแก้ไขแนบไฟล์ทุจริต //
 router.route('/backoffice/edit/complainCorruptFiles')
-.post(async (req, res, next) => {
+.post(auth(), async (req, res, next) => {
     try {
+
+        let fileName = await ''
+
+        if(req.body.file_name === null){
+            console.log('true');
+            const arr_file          = await req.body.file_type.split("/")
+
+            const hashedFileName    = await hashFileName(req.body.file_original);
+    
+            fileName                = await hashedFileName + '.' + arr_file[1] 
+        }else{
+            console.log('false');
+            fileName                = await req.body.file_name
+        }
+
+      
+
         let item = await {
             "reference_code"    : req.body.reference_code,
             "file_original"     : req.body.file_original,
-            "file_name"         : req.body.file_name,
+            "file_name"         : fileName,
             "file_type"         : req.body.file_type,
             "check_remove"      : req.body.check_remove,
-            "check_remove_file" : req.body.check_remove_file,
+            // "check_remove_file" : req.body.check_remove_file,
             "modified_by"       : req.body.admin_id,
             "modified_date"     : date
         }
@@ -822,7 +1022,8 @@ router.route('/backoffice/edit/complainCorruptFiles')
 
             const result = {
                 "status": 200,
-                "corrupt__file_id" : req.body.id
+                "corrupt_file_id" : req.body.id,
+                "file_name" : fileName
             }
 
             return res.json(result)
@@ -833,28 +1034,11 @@ router.route('/backoffice/edit/complainCorruptFiles')
     }  
 })
 
-router.route('/backoffice/get/replyMessage')
-.get(auth(), async (req, res, next) => {
-    try {
-        const sql = await "SELECT * FROM reply_message WHERE check_remove = 0 ORDER BY id DESC"
-        db.query(sql, async function(err, result, fields){ 
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-    } catch (error) {
-        console.log('getReplyMessage',error);     
-    }
 
-})
 
+// POST สร้างข้อความตอบกลับผู้ใช้งาน //
 router.route('/backoffice/create/replyMessage')
-.post(async (req, res, next) => {
+.post(auth(), async (req, res, next) => {
     try {
 
         let item = await req.body
@@ -869,6 +1053,7 @@ router.route('/backoffice/create/replyMessage')
             item = await [{'id' : results.insertId, ...item}]
             const result = {
                 "status": 200,
+
                 // "corrupt_file_id": results.insertId
               }
             return res.json(result)
@@ -878,8 +1063,9 @@ router.route('/backoffice/create/replyMessage')
     }  
 })
 
+// POST แก้ไขข้อความตอบกลับผู้ใช้งาน //
 router.route('/backoffice/edit/replyMessage')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -914,6 +1100,7 @@ router.route('/backoffice/edit/replyMessage')
 
 });
 
+// POST ลบรายการข้อความตอบกลับผู้ใช้งาน //
 router.route('/backoffice/update/deleteReplyMessage')
 .post(auth(), async (req,res, next)=> { 
     try {
@@ -947,6 +1134,7 @@ router.route('/backoffice/update/deleteReplyMessage')
     }
 });
 
+// POST อัพเดตสถานะการใช้งานข้อความตอบกลับผู้ใช้งาน //
 router.route('/backoffice/update/replyMessageStatus')
 .post(auth(), async (req,res, next)=> { 
     try {
@@ -982,26 +1170,9 @@ router.route('/backoffice/update/replyMessageStatus')
     }
 });
 
-router.route('/backoffice/get/contactChannels')
-.get(auth(), async (req, res, next) => {
-    try {
-        const sql = await "SELECT * FROM contact_channels WHERE check_remove = 0 ORDER BY id DESC"
-        db.query(sql, async function(err, result, fields){ 
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-    } catch (error) {
-        console.log('getContactChannels',error);     
-    }
 
-})
 
+// POST สร้างช่องทางการติดต่อ //
 router.route('/backoffice/create/contactChannels')
 .post(async (req, res, next) => {
     try {
@@ -1027,8 +1198,9 @@ router.route('/backoffice/create/contactChannels')
     }  
 })
 
+// POST แก้ไขช่องทางการติดต่อ //
 router.route('/backoffice/edit/contactChannels')
-.post (async (req,res, next) => { 
+.post (auth(), async (req,res, next) => { 
 
     try {
 
@@ -1063,6 +1235,39 @@ router.route('/backoffice/edit/contactChannels')
 
 });
 
+// POST ลบรายการช่องทางการติดต่อ //
+router.route('/backoffice/update/deleteContactChannels')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove"  : req.body.check_remove,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE contact_channels SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateDeleteContactChannels',error);
+    }
+});
+
+// POST อัพเดตสถานะการใช้งานช่องทางการติดต่อ //
 router.route('/backoffice/update/contactChannelsStatus')
 .post(auth(), async (req,res, next)=> { 
     try {
@@ -1094,7 +1299,186 @@ router.route('/backoffice/update/contactChannelsStatus')
 });
 
 
-router.route('/backoffice/update/deleteContactChannels')
+
+// POST สร้างช่องทางการประกาศ //
+router.route('/backoffice/create/announce')
+.post(auth(), async (req, res, next) => {
+    try {
+        
+        const arr_file          = await req.body.file_type.split("/")
+
+        const hashedFileName    = await hashFileName(req.body.file_original);
+
+        const fileName                = await hashedFileName + '.' + arr_file[1] 
+
+
+        let item = await {
+            "announce_name"           : req.body.announce_name,
+            "announce_title"          : req.body.announce_title,
+            "announce_content"        : req.body.announce_content,
+            "announce_type"           : req.body.announce_type,
+            "number_preview"          : req.body.number_preview,
+            "file_original"           : req.body.file_original,
+            "file_name"               : fileName,
+            "file_type"               : req.body.file_type,
+            "start_date"              : req.body.start_date,
+            "end_date"                : req.body.end_date,
+            "status"                  : req.body.status,
+            "check_remove"            : req.body.check_remove,
+            "create_by"               : req.body.create_by,
+            "create_date"             : date,
+            "modified_by"             : req.body.create_by,
+            "modified_date"           : date
+        }
+
+    
+        let sql = await "INSERT INTO announce_list SET ?"
+
+        db.query(sql, item, async function (error,results,fields){
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            req.body = await [{'id' : results.insertId, ...req.body}]
+
+            // return res.json({"announce_id": result.announce_id, "status": 200})
+
+            const result = {
+                "status": 200,
+                "announce_id": results.insertId,
+                "file_name" : fileName
+            }
+
+            return res.json(result)
+
+            // return res.json({"announce_id": result.announce_id, "status": 200})
+
+            // if(result){
+
+            //     const arr_file = await req.body.file_type.split("/")
+    
+            //     let file_name = await ''
+                
+            //     if(req.body.file_type === 'image/jpeg' || req.body.v === 'image/jpg' || req.body.file_type === 'image/png'){
+    
+            //     file_name = await 'imgAnnounce' +  result.announce_id + '.' + arr_file[1] 
+    
+            //     }else if(req.body.file_type === 'application/pdf'){
+    
+            //     file_name = await 'pdfAnnounce' +  result.announce_id + '.' + arr_file[1] 
+
+            //     }
+
+            //     let updateData = await {
+            //         "file_original" : req.body.file_name,
+            //         "file_name"     : file_name,
+            //         "file_type"     : req.body.file_type,
+            //         "modified_by"   : req.body.roles_id,
+            //         "modified_date" : date,
+            //     }
+    
+            //     let sql_update = await "UPDATE announce_list SET ? WHERE id = ?"
+    
+            //     db.query(sql_update, [updateData, result.announce_id], async function (err, result2, fields) {
+    
+            //         if (error) return res.status(500).json({
+            //             "status": 500,
+            //             "message": "Internal Server Error" // error.sqlMessage
+            //         })
+    
+            //         return res.json({"announce_id": result.announce_id, "status": 200})
+                    
+            //     });
+
+            // }
+
+        })
+    } catch (error) {
+        console.log('createAnnounce', error);
+    }  
+})
+
+// POST แก้ไขช่องทางการประกาศ //
+router.route('/backoffice/edit/announce')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        // let fileName = null
+
+            const arr_file          = await req.body.file_type.split("/")
+
+        // if(req.body.file_name === null || req.body.file_name === undefined){
+
+            const hashedFileName    = await hashFileName(req.body.file_original);
+
+            const fileName                = await hashedFileName + '.' + arr_file[1] 
+
+            console.log(fileName);
+
+        // }else{
+
+        //     fileName                = await req.body.file_name
+        // }
+
+        // console.log(fileName);
+        // console.log(fileName);
+        // console.log(req.body.file_type);
+        
+        // const hashedFileName    = await hashFileName(req.body.file_name);
+
+        // const arr_file          = await req.body.file_type.split("/")
+    
+        // const fileName          = await hashedFileName + '.' + + arr_file[1] 
+
+        let item = await {
+            "announce_name"             : req.body.announce_name,
+            "announce_title"            : req.body.announce_title,
+            "announce_content"          : req.body.announce_content,
+            "announce_type"             : req.body.announce_type,
+            "file_original"             : req.body.file_original,
+            "file_name"                 : fileName,
+            "file_type"                 : req.body.file_type,
+            "start_date"                : req.body.start_date,
+            "end_date"                  : req.body.end_date,
+            "status"                    : req.body.status,
+            "check_remove"              : req.body.check_remove,
+            "modified_by"               : req.body.roles_id,
+            "modified_date"             : date
+            
+        }
+
+        console.log(fileName);
+      
+        let sql = "UPDATE announce_list SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.announce_id], (error,results,fields)=>{
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "announce_id": req.body.announce_id,
+                "file_name" : fileName
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('editAnnounce',error);
+    }
+});
+
+// POST ลบรายการช่องทางการประกาศ //
+router.route('/backoffice/update/deleteAnnounce')
 .post(auth(), async (req,res, next)=> { 
     try {
 
@@ -1103,7 +1487,7 @@ router.route('/backoffice/update/deleteContactChannels')
             "modified_by"   : req.body.admin_id,
             "modified_date" : date
         }
-        let sql = "UPDATE contact_channels SET ? WHERE id = ?"
+        let sql = "UPDATE announce_list SET ? WHERE id = ?"
         
         db.query(sql,[item, req.body.id], (error,results,fields)=>{
 
@@ -1121,7 +1505,249 @@ router.route('/backoffice/update/deleteContactChannels')
         })
 
     } catch (error) {
-        console.log('updateDeleteContactChannels',error);
+        console.log('updatedeleteAnnounce',error);
+    }
+});
+
+// POST อัพเดตสถานะการใช้งานช่องทางการประกาศ //
+router.route('/backoffice/update/announcesStatus')
+.post(auth(), async (req,res, next)=> { 
+    try {
+        let item = {
+            "status"        : req.body.status,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE announce_list SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updateannouncesStatus',error);
+    }
+});
+
+// POST ลบไฟล์แนบช่องทางการประกาศ //
+router.route('/backoffice/update/deleteAnnounceFile')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+            // "check_remove"  : req.body.check_remove,
+            "file_original" : req.body.file_original,
+            "file_name"     : req.body.file_name,
+            "file_type"     : req.body.file_type,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE announce_list SET ? WHERE id = ?"
+        // let sql = "UPDATE announce_list_files SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updatedeleteAnnounce',error);
+    }
+});
+
+
+
+// POST สร้างรายการแบนเนอร์ //
+router.route('/backoffice/create/banner')
+.post(auth(), async (req, res, next) => {
+    try {
+        
+        const arr_file          = await req.body.file_type.split("/")
+
+        const hashedFileName    = await hashFileName(req.body.file_original);
+
+        const fileName          = await hashedFileName + '.' + arr_file[1] 
+
+
+        let item = await {
+            "banner_name"               : req.body.banner_name,
+            "file_original"             : req.body.file_original,
+            "file_name"                 : fileName,
+            "file_type"                 : req.body.file_type,
+            "start_date"                : req.body.start_date,
+            "end_date"                  : req.body.end_date,
+            "status"                    : req.body.status,
+            "check_remove"              : req.body.check_remove,
+            "create_by"                 : req.body.create_by,
+            "create_date"               : date,
+            "modified_by"               : req.body.create_by,
+            "modified_date"             : date
+        }
+
+    
+        let sql = await "INSERT INTO banners_list SET ?"
+
+        db.query(sql, item, async function (error,results,fields){
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+            req.body = await [{'id' : results.insertId, ...req.body}]
+
+            const result = {
+                "status": 200,
+                "banner_id": results.insertId,
+                "file_name" : fileName
+            }
+
+            return res.json(result)
+        })
+    } catch (error) {
+        console.log('createBanner', error);
+    }  
+})
+
+// POST แก้ไขรายการแบนเนอร์ //
+router.route('/backoffice/edit/banner')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        const arr_file          = await req.body.file_type.split("/")
+
+        const hashedFileName    = await hashFileName(req.body.file_original);
+
+        const fileName                = await hashedFileName + '.' + arr_file[1] 
+
+        let item = await {
+            "banner_name"               : req.body.banner_name,
+            "file_original"             : req.body.file_original,
+            "file_name"                 : fileName,
+            "file_type"                 : req.body.file_type,
+            "start_date"                : req.body.start_date,
+            "end_date"                  : req.body.end_date,
+            // "status"                    : req.body.status,
+            // "check_remove"              : req.body.check_remove,
+            "modified_by"               : req.body.roles_id,
+            "modified_date"             : date
+            
+        }
+
+        let sql = "UPDATE banners_list SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.banner_id], (error,results,fields)=>{
+
+            console.log(sql);
+
+            console.log(error);
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "banner_id": req.body.banner_id,
+                "file_name" : fileName
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('editAnnounce',error);
+    }
+});
+
+// POST ลบรายการแบนเนอร์ //
+router.route('/backoffice/update/deleteBanner')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+            "check_remove"  : req.body.check_remove,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE banners_list SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updatedeleteBanner',error);
+    }
+});
+
+// POST ลบไฟล์แนบแบนเนอร์ //
+router.route('/backoffice/update/deleteBannerFile')
+.post(auth(), async (req,res, next)=> { 
+    try {
+
+        let item = {
+
+            "file_original" : req.body.file_original,
+            "file_name"     : req.body.file_name,
+            "file_type"     : req.body.file_type,
+            "modified_by"   : req.body.admin_id,
+            "modified_date" : date
+        }
+        let sql = "UPDATE banners_list SET ? WHERE id = ?"
+        // let sql = "UPDATE announce_list_files SET ? WHERE id = ?"
+        
+        db.query(sql,[item, req.body.id], (error,results,fields)=>{
+
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+                "data": results
+            }
+         
+            return res.json(result)
+        })
+
+    } catch (error) {
+        console.log('updatedeleteAnnounce',error);
     }
 });
 

@@ -8,6 +8,7 @@ exports.uploadFile = (req, res) => {
 
   // Access the uploaded file using req.files
   const files = req.files.files;
+  // const fileName = req.files.file_name;
   const types = req.body.types;
   const id    = req.body.id;
 
@@ -28,12 +29,14 @@ exports.uploadFile = (req, res) => {
 
       let filePath = null;
 
-      if(req.body.types === 'Complain'){
+      if(types === 'Complain'){
         filePath = __dirname + '/public/uploads/complain/' + file_name;
-      }else if(req.body.types === 'ComplainStep'){
+      }else if(types === 'ComplainStep'){
         filePath = __dirname + '/public/uploads/complain_step/' + file_name;
-      }else{
+      }else if(types === 'Corrupt'){
         filePath = __dirname + '/public/uploads/corrupt/' + file_name;
+      }else{
+        filePath = __dirname + '/public/uploads/announce/' + file_name;
       }
 
       // Use the mv() method to save each file to the server
@@ -49,10 +52,14 @@ exports.uploadFile = (req, res) => {
 
     let file_name = ''
 
+  
+
     if(files.mimetype === 'image/jpeg' || files.mimetype === 'image/jpg' || files.mimetype === 'image/png'){
       file_name = 'img' + types + id + '_' + '1' + '.' + arr_file[1] 
+     
     }else if(files.mimetype === 'application/pdf'){
       file_name = 'pdf' + types + id + '_' + '1' + '.' + arr_file[1] 
+
     }
 
     let filePath = null
@@ -61,8 +68,13 @@ exports.uploadFile = (req, res) => {
       filePath = __dirname + '/public/uploads/complain/' + file_name;
     }else if(types === 'ComplainStep'){
       filePath = __dirname + '/public/uploads/complain_step/' + file_name;
+    }else if(types === 'Corrupt'){
+      // filePath = __dirname + '/public/uploads/corrupt/' + file_name;
+      filePath = __dirname + '/public/uploads/corrupt/' + req.body.file_name;
+    }else if(types === 'Announce'){
+      filePath = __dirname + '/public/uploads/announce/' + req.body.file_name;
     }else{
-      filePath = __dirname + '/public/uploads/corrupt/' + file_name;
+      filePath = __dirname + '/public/uploads/banner/' + req.body.file_name;
     }
 
     files.mv(filePath, (error) => {

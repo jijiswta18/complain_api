@@ -1,17 +1,7 @@
 
-const express       = require('express')
-// const cors          = require('cors')
-const router        = express.Router()
-const db            = require('../config/db') // เรียกใช้งานเชื่อมกับ MySQL
-
-// router.use(cors({
-//     "Access-Control-Allow-Origin": "origin",
-// // origin: '*'
-
-// }));
-
-
-
+const express       = require('express');
+const router        = express.Router();
+const db            = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 
 router.route('/get/province')
 .get(async (req, res, next) => {
@@ -37,7 +27,7 @@ router.route('/get/province')
         console.log(error);     
     }
 
-})
+});
 
 router.route('/get/districts/:id')
 .get(async (req, res, next) => {
@@ -63,7 +53,7 @@ router.route('/get/districts/:id')
         console.log(error);     
     }
 
-})
+});
 
 router.route('/get/subdistricts/:id')
 .get(async (req, res, next) => {
@@ -89,10 +79,9 @@ router.route('/get/subdistricts/:id')
         console.log(error);     
     }
 
-})
+});
 
-
-router.route('/get/replyMessage')
+router.route('/get/selectReplyMessage')
 .get(async (req, res, next) => {
 
     try {
@@ -116,9 +105,9 @@ router.route('/get/replyMessage')
         console.log(error);     
     }
 
-})
+});
 
-router.route('/get/contactChannels')
+router.route('/get/selectContactChannels')
 .get(async (req, res, next) => {
 
     try {
@@ -142,7 +131,7 @@ router.route('/get/contactChannels')
         console.log(error);     
     }
 
-})
+});
 
 
 module.exports = router

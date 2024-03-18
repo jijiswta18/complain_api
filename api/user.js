@@ -24,10 +24,9 @@ const ciphertext = CryptoJS.AES.encrypt(message, secretKey).toString();
 const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
 
 moment.locale('th');
-
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-
+/////////////////////// function //////////////////////////////////
 
 async function generateToken(id, audience) {
 
@@ -71,6 +70,203 @@ function generateStrongPassword(length) {
     return password.join('');
 }
 
+///////////////////////// GET ///////////////////////////////////
+
+router.route('/user/checkTokenReset/:token')
+.get(async (req, res, next) => {
+
+    try {
+
+        const { token } = req.params;
+
+        let sql = await "SELECT forgot_token, first_reset_password FROM employee_register WHERE forgot_token = " + `'${token}'`
+
+        db.query(sql, async function (error,results,fields){
+
+
+            let forgotToken = results[0].forgot_token
+
+            // let first_reset_password = results[0].first_reset_password
+
+            if(forgotToken){
+
+                var cert = fs.readFileSync('jwtRS256.key.pub');
+                // Verify and decode the token
+                jwt.verify(token, cert, (err, decoded) => {
+
+                if (err) {
+                    // Token verification failed
+                    console.error('Invalid token:', err);
+                    return res.status(401).send('Invalid token');
+                }
+
+                if (decoded.expiresToken <= date) {
+                    // Token has expired
+                    console.log('Token has expired');
+                    return res.status(200).json({
+                        "status": 401,
+                        "message": "Token has expired" // error.sqlMessage
+                    })
+                    // return res.status(401).send('Token has expired');
+                }
+                // Token is still valid
+                console.log('Token is valid');
+                // Continue with the password reset logic
+                // ...
+                res.send('Password reset page');
+                });
+              
+            }else{
+                return res.status(500).json({
+                    "status": 500,
+                    "message": "not user to system" // error.sqlMessage
+                })
+          
+              
+            }
+
+        })
+        
+    } catch (error) {
+        console.log(error);     
+    }
+
+});
+
+router.route('/user/get/dataAnnounce')
+.get( async (req, res, next) => {
+    try {
+
+      
+        const sql = await "SELECT * FROM announce_list WHERE check_remove = 0 ORDER BY id DESC"
+
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            console.log('getAnnounce',err);
+
+                res.status(200).json({
+                    data: result,
+                    message: "success"
+                }); 
+
+        })
+    } catch (error) {
+        console.log('getAnnounce',error);     
+    }
+});
+
+router.route('/user/get/announceDetail/:id')
+.get( async (req, res, next) => {
+    try {
+
+      
+        const sql = await "SELECT * FROM announce_list WHERE id = " + `'${req.params.id}' AND check_remove = 0 ORDER BY id DESC`
+
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            console.log('getAnnounce',err);
+
+                res.status(200).json({
+                    data: result,
+                    message: "success"
+                }); 
+
+        })
+    } catch (error) {
+        console.log('getAnnounce',error);     
+    }
+
+});
+
+router.route('/user/counter')
+.post(async (req,res, next) => {
+
+    console.log(req.body.id)
+
+    let sql = await "UPDATE announce_list SET number_preview = number_preview + 1 WHERE id = " + `'${req.body.id}'`;
+    
+        db.query(sql, async function (error,results,fields){
+
+            console.log(sql);
+    
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+              
+            }
+    
+            return res.json(result)
+         
+            
+        })
+        
+
+});
+
+router.route('/user/get/popupBanner')
+.get( async (req, res, next) => {
+    try {
+
+        const sql = await "SELECT * FROM banners_list WHERE status = 1 && check_remove = 0 ORDER BY id DESC"
+
+        db.query(sql, async function(err, result, fields){ 
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            console.log('getAnnounce',err);
+
+                res.status(200).json({
+                    data: result,
+                    message: "success"
+                }); 
+
+        })
+    } catch (error) {
+        console.log('getAnnounce',error);     
+    }
+
+});
+
+router.route('/user/get/listFollow/:id')
+.get(auth(), async (req, res, next) => {
+
+    try {
+
+        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id} ' ORDER BY id DESC`
+
+        db.query(sql, async function(err, result, fields){
+            
+            if (err) res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            res.status(200).json({
+                data: result,
+                message: "success"
+            }); 
+        })
+
+    } catch (error) {
+        console.log('listFollow',error);     
+    }
+
+});
+
 router.route('/user/get/complainDetail/:id')
 .get(auth(), async (req, res, next) => {
     try {
@@ -106,36 +302,7 @@ router.route('/user/get/complainDetail/:id')
     } catch (error) {
         console.log(error);     
     }
-})
-
-
-router.route('/user/get/listFollow/:id')
-.get(auth(), async (req, res, next) => {
-
-    try {
-
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id} ' ORDER BY id DESC`
-
-        db.query(sql, async function(err, result, fields){
-            
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
-
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
-
-    } catch (error) {
-        console.log('listFollow',error);     
-    }
-
-})
-
-
+});
 
 router.route('/user/get/complainStep/:id')
 .get(auth(), async (req, res, next) => {
@@ -162,8 +329,13 @@ router.route('/user/get/complainStep/:id')
         console.log(error);     
     }
 
-})
+});
 
+
+
+
+
+///////////////////////// POST ///////////////////////////////////
 
 router.route('/user/login')
 .post(async (req, res, next) => {
@@ -174,6 +346,8 @@ router.route('/user/login')
         db.query(sql, email, async function (err, result, fields){
             let user    = await null
             if(result){
+
+             
                 user    = await result[0]
                 if(user && (await bcrypt.compare(password, user.password))){
                     const audience = 'your-audience';
@@ -257,7 +431,7 @@ router.route('/user/login')
     } catch (error) {
         console.log(error)
     }
-})
+});
 
 
 router.route('/user/checkLogin')
@@ -278,8 +452,13 @@ router.route('/user/checkLogin')
     
                 user = await result[0]
 
-               
+                console.log(await bcrypt.compare(password, user.password));
+                console.log(password);
+
+              
                 if(user && (await bcrypt.compare(password, user.password))){
+
+                       console.log(password)
 
                     res.status(200).json({
                         message : "User success",
@@ -301,7 +480,7 @@ router.route('/user/checkLogin')
     } catch (error) {
         console.log(error)
     }
-})
+});
 
 router.route('/user/resetePasswordLogin')
 .post(async (req, res, next) => {
@@ -329,7 +508,7 @@ router.route('/user/resetePasswordLogin')
     } catch (error) {
         console.log(error);
     }
-})
+});
 
 
 router.route('/user/forgot-password')
@@ -492,7 +671,7 @@ router.route('/user/forgot-password')
         });
     }
 
-})
+});
 
 // router.route('/user/forgot/reset-password')
 // .post(async (req, res, next) => {
@@ -667,7 +846,7 @@ router.route('/user/forgot/reset-password')
     } catch (error) {
        console.log(error); 
     }
-})
+});
 
 router.route('/user/reset-password')
 .post(async (req, res, next) => {
@@ -756,7 +935,7 @@ router.route('/user/reset-password')
     } catch (error) {
        console.log(error); 
     }
-})
+});
 
 router.route('/user/register')
 .post(async (req, res, next) => {
@@ -858,7 +1037,7 @@ router.route('/user/register')
     } catch (error) {
         console.log("errorCreateUser :",  error);
     }
-})
+});
 
 router.route('/user/checkMail')
 .post(async (req, res, next) => {
@@ -890,7 +1069,7 @@ router.route('/user/checkMail')
     } catch (error) {
         console.log("errorCreateUser :",  error);
     }
-})
+});
 
 router.route('/user/complain')
 .post(async (req, res, next) => {
@@ -1030,7 +1209,7 @@ router.route('/user/complain')
     } catch (error) {
         console.log("complain :",  error);
     }
-})
+});
 
 router.route('/user/files')
 .post(async (req, res, next) => {
@@ -1074,7 +1253,7 @@ router.route('/user/files')
  
 
    
-})
+});
 
 router.route('/user/edit/profile')
 .post(async (req, res, next) => {
@@ -1123,70 +1302,7 @@ router.route('/user/edit/profile')
     } catch (error) {
         console.log("errorCreateUser :",  error);
     }
-})
-
-router.route('/user/checkTokenReset/:token')
-.get(async (req, res, next) => {
-
-    try {
-
-        const { token } = req.params;
-
-        let sql = await "SELECT forgot_token, first_reset_password FROM employee_register WHERE forgot_token = " + `'${token}'`
-
-        db.query(sql, async function (error,results,fields){
-
-
-            let forgotToken = results[0].forgot_token
-
-            // let first_reset_password = results[0].first_reset_password
-
-            if(forgotToken){
-
-                var cert = fs.readFileSync('jwtRS256.key.pub');
-                // Verify and decode the token
-                jwt.verify(token, cert, (err, decoded) => {
-
-                if (err) {
-                    // Token verification failed
-                    console.error('Invalid token:', err);
-                    return res.status(401).send('Invalid token');
-                }
-
-                if (decoded.expiresToken <= date) {
-                    // Token has expired
-                    console.log('Token has expired');
-                    return res.status(200).json({
-                        "status": 401,
-                        "message": "Token has expired" // error.sqlMessage
-                    })
-                    // return res.status(401).send('Token has expired');
-                }
-                // Token is still valid
-                console.log('Token is valid');
-                // Continue with the password reset logic
-                // ...
-                res.send('Password reset page');
-                });
-              
-            }else{
-                return res.status(500).json({
-                    "status": 500,
-                    "message": "not user to system" // error.sqlMessage
-                })
-          
-              
-            }
-
-        })
-        
-    } catch (error) {
-        console.log(error);     
-    }
-
-})
-
-
+});
 
 
 

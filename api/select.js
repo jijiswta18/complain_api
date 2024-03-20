@@ -8,9 +8,11 @@ router.route('/get/province')
 
     try {
 
-        const sql = await "SELECT id, name_th FROM province "
+        const sql = await "SELECT province_id, name_th FROM province "
 
         db.query(sql, async function(err, result, fields){
+
+            console.log(err);
             
             if (err) res.status(500).json({
                 "status": 500,
@@ -34,7 +36,7 @@ router.route('/get/districts/:id')
 
     try {
 
-        const sql = await "SELECT id, name_th FROM districts WHERE province_id = " + `'${req.params.id}'`
+        const sql = await "SELECT district_id, name_th FROM districts WHERE province_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){
             
@@ -60,7 +62,7 @@ router.route('/get/subdistricts/:id')
 
     try {
 
-        const sql = await "SELECT id, name_th, postcode FROM subdistricts WHERE districts_id = " + `'${req.params.id}'`
+        const sql = await "SELECT subdistrict_id, name_th, postcode FROM subdistricts WHERE district_id = " + `'${req.params.id}'`
 
         db.query(sql, async function(err, result, fields){
             

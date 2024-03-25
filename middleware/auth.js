@@ -12,6 +12,7 @@ module.exports = () => {
 
         const authorization = req.headers['authorization'];
 
+
         if (!authorization) {
             return res.status(401).send("Unauthorized: No authentication header");
         }
@@ -24,7 +25,7 @@ module.exports = () => {
 
         try {
             
-            const decoded = jwt.verify(token, cert);
+            const decoded = jwt.verify(token, cert, { algorithm: 'RS256' });
 
             const sql = "SELECT token.expire, token.revoke FROM token WHERE token = " + `'${token}'`;
 

@@ -8,10 +8,10 @@ const cert = fs.readFileSync('jwtRS256.key.pub');
 
 module.exports = () => {
     return (req, res, next) => {
-        console.log('Auth Middleware');
 
         const authorization = req.headers['authorization'];
 
+     
 
         if (!authorization) {
             return res.status(401).send("Unauthorized: No authentication header");
@@ -19,18 +19,48 @@ module.exports = () => {
 
         const token = req.headers['authorization'].split(' ')[1];
 
+        console.log('=>>>>>>>>>>>>>',req.headers['authorization'].split(' ')[1])
+
         if (!token) {
             return res.status(401).send("token: No authentication header");
         }
 
-        try {
-            
-            const decoded = jwt.verify(token, cert, { algorithm: 'RS256' });
 
+        try {
+
+            const checkDecoded = jwt.decode(token, { complete: true });
+
+            var dataDecoded = null
+
+            if(checkDecoded.payload.role === 'user'){
+
+                dataDecoded = jwt.verify(token, '', { algorithms: ['none'] }, function(err, decoded) {
+                    if (err) {
+                      console.error('Token verification failed:', err.message);
+                    } else {
+                    console.log('Decoded Token:', decoded);
+                    }
+                });
+
+            }else{
+
+                dataDecoded = jwt.verify(token, cert, { algorithm: 'RS256' }, function(err, decoded) {
+                    if (err) {
+                        console.error('>>>>>>>>>>>>>Token verification failed:', err.message);
+                    } else {
+                    console.log('Decoded Token:', decoded);
+                    }
+                });
+
+            } 
+    
+            // const decoded = jwt.verify(token, cert, { algorithm: 'RS256' });
+            // const decoded = jwt.verify(token, cert, { algorithm: 'RS256' });
+           
             const sql = "SELECT token.expire, token.revoke FROM token WHERE token = " + `'${token}'`;
 
             db.query(sql, (error, result) => {
-                console.log(result);
+           
                 const revoke = result[0].revoke;
                 const expirationDate = result[0].expire;
 
@@ -66,7 +96,7 @@ module.exports = () => {
                             "message": "Internal Server Error" // error.sqlMessage
                         })
 
-                        req.user = decoded;
+                        req.user = dataDecoded;
     
                         next();
     

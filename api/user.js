@@ -28,17 +28,28 @@ let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 /////////////////////// function //////////////////////////////////
 
-async function generateToken(id, audience) {
+async function generateToken(id) {
+
+    // header = {"alg":"HS256","typ":"JWT"}
 
     const payload = await {
         jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
         "username": id.userId,
-        "aud": audience,
+        // "aud": audience,
         "role": "user",
         "expiresIn": "1h"     
     }
-    const privateKey = await fs.readFileSync('jwtRS256.key');
-    const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256'});
+    
+    // const privateKey = await fs.readFileSync('jwtRS256.key');
+
+
+
+    // const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256' });
+
+    const token = jwt.sign(payload, null, { algorithm: 'none' });
+
+        console.log('Generated Token (none algorithm):', token);
+
     return token;
 
 }
@@ -350,9 +361,11 @@ router.route('/user/login')
              
                 user    = await result[0]
                 if(user && (await bcrypt.compare(password, user.password))){
-                    const audience = 'your-audience';
+                    // const audience = 'your-audience';
                     // Generate token
-                    const newToken = await generateToken({ userId: user.id }, audience);
+                    const newToken = await generateToken({ userId: user.id });
+
+                    console.log(newToken);
 
                     let updateData = await {
                     "token"       : newToken,

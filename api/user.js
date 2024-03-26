@@ -7,21 +7,21 @@ const bcrypt        = require('bcrypt');
 const jwt           = require('jsonwebtoken');
 const nodemailer    = require("nodemailer");
 const bodyParser    = require('body-parser');
-const CryptoJS      = require("crypto-js");
+// const CryptoJS      = require("crypto-js");
 const fs            = require('fs');
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: false }));
 require("dotenv").config();
 
-const message = "Hello, World!";
-const secretKey = "secret key";
+// const message = "Hello, World!";
+// const secretKey = "secret key";
 
 // Encrypt the message using AES
-const ciphertext = CryptoJS.AES.encrypt(message, secretKey).toString();
+// const ciphertext = CryptoJS.AES.encrypt(message, secretKey).toString();
 
 // Decrypt the message using AES
-const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
+// const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
 
 moment.locale('th');
 let date = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -30,25 +30,19 @@ let date = moment().format('YYYY-MM-DD HH:mm:ss');
 
 async function generateToken(id) {
 
-    // header = {"alg":"HS256","typ":"JWT"}
-
     const payload = await {
         jti: 'unique-nonce-value', // Add a unique nonce value to the jti claim
         "username": id.userId,
-        // "aud": audience,
         "role": "user",
         "expiresIn": "1h"     
     }
     
-    // const privateKey = await fs.readFileSync('jwtRS256.key');
-
-
+    const privateKey = await fs.readFileSync('jwtRS256.key');
 
     // const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256' });
 
-    const token = jwt.sign(payload, null, { algorithm: 'none' });
+    const token = await jwt.sign(payload, privateKey,{ algorithm: 'RS256' });
 
-        console.log('Generated Token (none algorithm):', token);
 
     return token;
 
@@ -252,14 +246,17 @@ router.route('/user/get/popupBanner')
 
 });
 
-router.route('/user/get/listFollow/:id')
+router.route('/user/get/listFollow')
 .get(auth(), async (req, res, next) => {
 
     try {
 
-        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${req.params.id} ' ORDER BY id DESC`
+        let id = req.query.id
+
+        const sql = await "SELECT * FROM employee_complain WHERE register_id = " + `'${id} ' ORDER BY id DESC`
 
         db.query(sql, async function(err, result, fields){
+
             
             if (err) res.status(500).json({
                 "status": 500,
@@ -357,21 +354,18 @@ router.route('/user/login')
         db.query(sql, email, async function (err, result, fields){
             let user    = await null
             if(result){
-
-             
                 user    = await result[0]
                 if(user && (await bcrypt.compare(password, user.password))){
                     // const audience = 'your-audience';
                     // Generate token
-                    const newToken = await generateToken({ userId: user.id });
-
-                    console.log(newToken);
+                    let newToken = await generateToken({ userId: user.id });
 
                     let updateData = await {
                     "token"       : newToken,
                     "login_date"  : date,
                     }
                     const sql_update = await 'UPDATE employee_register SET ? WHERE id = ?'; 
+                    
                     db.query(sql_update, [updateData, user.id], async function (err, result2, fields) {
 
                         const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -389,7 +383,7 @@ router.route('/user/login')
                         let dataToken = await {
                             "token"         :   newToken,
                             "expire"        :   formattedDateTime,
-                            "revoke"        :   '0',
+                            "revoke"        :   0,
                             "user_id"       :   user.id,
                             "roles"         :   'user'
                         }
@@ -407,25 +401,25 @@ router.route('/user/login')
                                 
                         })
 
-                        let data = await {
-                            "id"                : user.id,
-                            // "token"             : user.token,
-                            "email"             : user.email,
-                            "name"              : user.name,
-                            "lastname"          : user.lastname,
-                            "gender"            : user.gender,
-                            "age"               : user.age,
-                            "phone"             : user.phone,
-                            "phone_other"       : user.phone_other,
-                            "address"           : user.address,
-                            "province_id"       : user.province_id,
-                            "district_id"       : user.district_id,
-                            "subdistrict_id"    : user.subdistrict_id,
-                            "postcode"          : user.postcode,
-                            "roles"             : user.roles,
-                        }
+                        // let data = await {
+                        //     "id"                : user.id,
+                        //     // "token"             : user.token,
+                        //     "email"             : user.email,
+                        //     "name"              : user.name,
+                        //     "lastname"          : user.lastname,
+                        //     "gender"            : user.gender,
+                        //     "age"               : user.age,
+                        //     "phone"             : user.phone,
+                        //     "phone_other"       : user.phone_other,
+                        //     "address"           : user.address,
+                        //     "province_id"       : user.province_id,
+                        //     "district_id"       : user.district_id,
+                        //     "subdistrict_id"    : user.subdistrict_id,
+                        //     "postcode"          : user.postcode,
+                        //     "roles"             : user.roles,
+                        // }
 
-                        return res.json({userdata: data, token: newToken})
+                        return res.json({userdata: user, token: newToken})
 
                       
                     });

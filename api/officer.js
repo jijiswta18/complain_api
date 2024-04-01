@@ -95,9 +95,15 @@ router.route('/backoffice/get/listFollow')
             sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.admin_id = " + `'${id}' AND a.status_call != 0 ORDER BY id DESC`
         } else if(roles == 'admin'){
              sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.status_call != 0 ORDER BY a.id DESC"
+        }else{
+            sql = await "SELECT a.* FROM employee_complain a WHERE a.admin_id = " + `'${id}' ORDER BY id DESC`
         }
 
+
         db.query(sql, async function(err, result, fields){
+
+            console.log(err);
+
           
             if (err) res.status(500).json({
                 "status": 500,

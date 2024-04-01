@@ -246,31 +246,31 @@ router.route('/user/get/popupBanner')
 
 });
 
-router.route('/user/get/listFollow')
-.get(auth(), async (req, res, next) => {
+// router.route('/user/get/listFollow')
+// .get(auth(), async (req, res, next) => {
 
-    try {
+//     try {
 
-        const sql = await "SELECT * FROM employee_complain ORDER BY id DESC"
+//         const sql = await "SELECT * FROM employee_complain ORDER BY id DESC"
 
-        db.query(sql, async function(err, result, fields){
+//         db.query(sql, async function(err, result, fields){
 
-            if (err) res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
+//             if (err) res.status(500).json({
+//                 "status": 500,
+//                 "message": "Internal Server Error" // error.sqlMessage
+//             })
 
-            res.status(200).json({
-                data: result,
-                message: "success"
-            }); 
-        })
+//             res.status(200).json({
+//                 data: result,
+//                 message: "success"
+//             }); 
+//         })
 
-    } catch (error) {
-        console.log('listFollow',error);     
-    }
+//     } catch (error) {
+//         console.log('listFollow',error);     
+//     }
 
-});
+// });
 
 // router.route('/user/get/listFollow/:id')
 // .get(auth(), async (req, res, next) => {

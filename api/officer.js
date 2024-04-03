@@ -93,10 +93,8 @@ router.route('/backoffice/get/listFollow')
 
         if(roles == 'general'){
             sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.admin_id = " + `'${id}' AND a.status_call != 0 ORDER BY id DESC`
-        } else if(roles == 'admin'){
+        } else {
              sql = await "SELECT a.*, b.name, b.lastname FROM employee_complain a LEFT JOIN admin b on a.admin_id = b.id WHERE a.status_call != 0 ORDER BY a.id DESC"
-        }else{
-            sql = await "SELECT a.* FROM employee_complain a WHERE a.admin_id = " + `'${id}' ORDER BY id DESC`
         }
 
 
